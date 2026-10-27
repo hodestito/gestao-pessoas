@@ -8,10 +8,10 @@ Atualizado em 27/10/2026. Complementa o [modelo de domínio](domain.md). Contrat
 |---|---|---|---|
 | UC-01 | Criar departamento | POST /departments | Implementado, sujeito à revisão do modelo. |
 | UC-02 | Criar cargo | POST /positions | Implementado, sujeito à revisão do modelo. |
-| UC-03 | Cadastrar colaborador | POST /employees | Implementado sem evento; publicação Kafka pendente. |
+| UC-03 | Cadastrar colaborador | POST /employees | Outbox, Kafka e histórico implementados nesta branch, aguardando revisão. |
 | UC-04 | Listar colaboradores | GET /employees | Implementado; integração aprovada pelo responsável técnico. |
 | UC-05 | Buscar por departamento | GET /employees/search?department=RH | Implementado, com integração autorizada pelo responsável técnico. |
-| UC-06 | Inativar colaborador | DELETE /employees/{id} | Implementado nesta branch; evento e revisão do PR pendentes. |
+| UC-06 | Inativar colaborador | DELETE /employees/{id} | Integrado na main pelo PR #3; evento pendente. |
 
 O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo de autenticação/autorização implementado. O enunciado não define papéis de acesso.
 
@@ -55,19 +55,19 @@ O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo 
 2. Consultar as referências de departamento e cargo.
 3. Verificar disponibilidade do e-mail para antecipar uma resposta compreensível.
 4. Criar Employee e salvar em uma transação protegida por unicidade e chaves estrangeiras no banco.
-5. Retornar 201 com os dados do colaborador criado. O fluxo ainda não emite EmployeeCreatedEvent; Kafka e suas garantias serão definidos no incremento de eventos.
+5. Gravar EmployeeCreatedEvent na Outbox na mesma transação; retornar 201 com os dados. Um publicador periódico envia ao Kafka e um consumidor grava o histórico de forma idempotente por eventId.
 
 **Erros HTTP implementados:** 400 para valores/identificadores malformados; 422 para referências inexistentes; 409 para e-mail duplicado. Esses códigos foram aprovados pelo responsável técnico, não são exigências expressas do enunciado. Violações inesperadas de integridade não são transformadas em erros de negócio conhecidos.
 
 **Cenários verificados e pendentes:**
 
-- Dados válidos e referências existentes criam um colaborador. Produzir o evento exigido ainda está pendente.
+- Dados válidos e referências existentes criam colaborador e evento na mesma transação; publicação e consumo são assíncronos.
 - Departamento inexistente impede o cadastro, sem colaborador nem evento de criação confirmado.
 - Cargo inexistente impede o cadastro.
 - Duas requisições simultâneas com o mesmo e-mail produzem somente um cadastro; a outra recebe conflito.
-- Rollback impedindo consumo de evento deve ser testado no incremento de eventos.
+- Erro no banco após os inserts desfaz colaborador e evento; publicação com falha mantém pendência e permite reenvio.
 
-**Limite da garantia:** a resposta de criação não garante que o histórico assíncrono já tenha sido gravado. Sem uma estratégia como Outbox, existe uma janela de perda entre a gravação e a publicação no Kafka.
+**Limite da garantia:** a resposta de criação confirma empregado e intenção de publicação, sem garantir que o histórico já exista. Outbox evita perder a intenção após o commit; reenvios continuam possíveis e são deduplicados no histórico. Kafka precisa estar habilitado e disponível para o processamento avançar. Consultar a decisão 006.
 
 ## UC-04 — Listar colaboradores
 
@@ -107,9 +107,9 @@ O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo 
 
 O enunciado exige consumidores para EmployeeCreatedEvent e EmployeeStatusChangedEvent, com logs customizados e atualização de employee_events.
 
-**Decisão:** usar Kafka; publicação e consumo ainda não implementados. Definir transações, identificação do evento, conteúdo mínimo, proteção contra duplicatas, observação de falhas e tempo de espera dos testes no incremento de eventos. Logs devem evitar expor dados pessoais desnecessários.
+**Decisão:** Kafka com Outbox, implementado nesta branch apenas para EmployeeCreatedEvent. eventId identifica a ocorrência lógica e é preservado nos reenvios; histórico tem chave única por evento. O payload inclui versão do contrato, tipo, identificadores e instante, sem nome/e-mail. Logs usam identificadores. EmployeeStatusChangedEvent continua pendente.
 
-**Critérios:** testar publicação e consumo, verificar o histórico após processamento e usar espera limitada nos testes. Documentar o comportamento em falhas e a janela de perda sem Outbox. Não afirmar sucesso de consumo apenas porque a API respondeu 201 ou 204.
+**Critérios verificados no cadastro:** publicação e consumo com Kafka real, histórico após processamento, espera limitada, falha transitória e duplicata com offset confirmado. O teste de publicação simula falha na marcação após envio; não reinicia o processo. Há reenvios, uma instância validada, sem ordenação garantida, retenção automática ou DLQ. Não afirmar sucesso de consumo apenas porque a API respondeu 201 ou 204.
 
 ## Como revisar cada incremento
 

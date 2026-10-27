@@ -1,6 +1,6 @@
 # 002 — Cadastro de colaborador
 
-Estado: aprovado pelo responsável técnico e implementado parcialmente; eventos pendentes. Data: 27/10/2026.
+Estado: cadastro aprovado e implementado; complemento de Outbox/Kafka para revisão descrito na decisão 006. Data: 27/10/2026.
 
 ## Decisões
 
@@ -16,4 +16,4 @@ O adaptador usa `saveAndFlush` para antecipar a execução do SQL; flush não é
 
 Uma constraint única em e-mail normalizado cobre ativos e inativos. Testes concorrentes exercitam a API; um teste adicional confirma que o próprio banco rejeita duplicação. Foram executados testes no H2 e no PostgreSQL 16 local. Não foi usado Testcontainers.
 
-O cadastro ainda não emite EmployeeCreatedEvent: Kafka, publicação e garantia entre banco e broker serão trabalhados no incremento de eventos. A resposta 201 não implica processamento de evento ou histórico.
+O complemento descrito na decisão 006 grava EmployeeCreatedEvent na Outbox na mesma transação do cadastro. A resposta 201 confirma empregado e intenção; não implica publicação Kafka nem processamento do histórico já concluídos.

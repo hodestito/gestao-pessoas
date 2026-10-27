@@ -1,6 +1,6 @@
 # 001 — Identidade de Employee e direção para eventos
 
-Estado: aprovado pelo responsável técnico para o modelo inicial; estratégia de publicação ainda pendente. Data: 27/10/2026. O cadastro posterior está registrado na [decisão 002](002-cadastro-employee.md).
+Estado: aprovado pelo responsável técnico para o modelo inicial. Data: 27/10/2026. O cadastro posterior está registrado na [decisão 002](002-cadastro-employee.md); a estratégia Outbox para cadastro está na [decisão 006](006-outbox-cadastro.md).
 
 ## Contexto e decisões
 
@@ -8,7 +8,7 @@ Estado: aprovado pelo responsável técnico para o modelo inicial; estratégia d
 - O objeto de valor Email normaliza espaços nas extremidades e caixa usando `Locale.ROOT`; e-mails são únicos inclusive para inativos. A validação de formato é uma política prática limitada, não validação completa das RFCs. A garantia entre colaboradores foi posteriormente implementada conforme a decisão 002.
 - Departamento e cargo devem existir; nome tem até 120 caracteres. O agregado valida que seus identificadores estão presentes; a verificação de existência e sua proteção no banco foram posteriormente implementadas conforme a decisão 002.
 - A criação recebe id e Instant e inicia ACTIVE. Receber o instante permite testes determinísticos sem acoplar o domínio ao relógio de sistema. Uma segunda inativação não altera o estado e retorna false; o contrato HTTP e a publicação do evento ainda serão decididos.
-- O responsável técnico selecionou Kafka para eventos, em linha com a preferência do desafio. A alternativa Spring Events é mais simples, mas não oferece os mesmos recursos de broker. Nenhuma mensageria foi implementada; a decisão sobre Outbox permanece para o incremento de eventos.
+- O responsável técnico selecionou Kafka para eventos, em linha com a preferência do desafio. A alternativa Spring Events é mais simples, mas não oferece os mesmos recursos de broker. A implementação posterior de Outbox e Kafka para cadastro está na decisão 006; o evento de inativação permanece pendente.
 
 ## Consequências e verificação
 

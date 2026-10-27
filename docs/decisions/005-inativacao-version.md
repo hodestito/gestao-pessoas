@@ -1,6 +1,6 @@
 # 005 — Inativação com bloqueio otimista
 
-Estado: implementado na branch feature/employee-deactivation; aguarda revisão e aprovação de merge. Data: 27/10/2026.
+Estado: aprovado pelo responsável técnico e integrado à main no PR #3. Data: 27/10/2026.
 
 ## Contexto e decisão
 
@@ -20,7 +20,7 @@ Atualização condicional `UPDATE ... WHERE status = 'ACTIVE'` poderia informar 
 
 O controle só protege operações que verifiquem e incrementem a versão. Escritas SQL externas que não respeitem o mecanismo podem contorná-lo. A releitura é limitada a uma tentativa; conflitos persistentes não são repetidos indefinidamente.
 
-O evento `EmployeeStatusChangedEvent` e sua persistência/publicação ainda não existem. Controle otimista não garante entrega ao Kafka nem a atomicidade entre banco e broker; Outbox ou outra estratégia ainda será discutida.
+O evento `EmployeeStatusChangedEvent` e sua persistência/publicação ainda não existem. Controle otimista não garante entrega ao Kafka nem a atomicidade entre banco e broker. A decisão 006 adota Outbox inicialmente para cadastro; a extensão para inativação será outro incremento.
 
 ## Verificação
 
