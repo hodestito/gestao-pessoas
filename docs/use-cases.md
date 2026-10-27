@@ -9,7 +9,7 @@ Atualizado em 27/10/2026. Complementa o [modelo de domínio](domain.md). Contrat
 | UC-01 | Criar departamento | POST /departments | Implementado, sujeito à revisão do modelo. |
 | UC-02 | Criar cargo | POST /positions | Implementado, sujeito à revisão do modelo. |
 | UC-03 | Cadastrar colaborador | POST /employees | Implementado sem evento; publicação Kafka pendente. |
-| UC-04 | Listar colaboradores | GET /employees | Em especificação. |
+| UC-04 | Listar colaboradores | GET /employees | Implementado; integração aprovada pelo responsável técnico. |
 | UC-05 | Buscar por departamento | GET /employees/search?department=RH | Em especificação. |
 | UC-06 | Inativar colaborador | DELETE /employees/{id} | Em especificação. |
 
@@ -71,13 +71,15 @@ O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo 
 
 ## UC-04 — Listar colaboradores
 
-**Proposta de contrato:** retornar 200 com uma página de colaboradores, incluindo ativos e inativos. Sem dados, retornar coleção vazia. Definir tamanho padrão, máximo e ordenação estável antes de implementar.
+**Contrato implementado:** retornar 200 com uma página de colaboradores, incluindo ativos e inativos quando status não é informado. Sem dados, retornar coleção vazia. `page` começa em 0; `size` varia de 1 a 100 e tem padrão 20. Ordenação crescente por createdAt e depois id. A ordenação é determinística para o conjunto consultado, mas alterações entre requisições podem deslocar itens entre páginas.
 
-**Dados previstos:** id, name, email, departmentId, positionId, createdAt e status. Evitar expor entidades JPA diretamente no contrato HTTP.
+**Dados retornados:** id, name, email, departmentId, positionId, createdAt e status. A resposta possui content, page, size, totalElements e totalPages; não expõe entidades JPA nem depende do formato JSON padrão de Page.
 
-**Erros propostos:** 400 para parâmetros de paginação inválidos.
+**Filtros:** name opcional, parcial, sem diferenciar caixa e sem garantia de ignorar acentos; valores vazios ou só com espaços não filtram. `%`, `_` e `!` são tratados literalmente. status opcional aceita ACTIVE ou INACTIVE. Não há filtro por id neste incremento.
 
-**Cenários a implementar:** coleção vazia, presença dos estados esperados, limites de página e ordenação estável para registros com valores de ordenação iguais. Listagem não produz evento de negócio.
+**Erros:** 400 para parâmetros de paginação inválidos, status não reconhecido ou deslocamento maior que o limite do JPA. O limite de tamanho e o cálculo do deslocamento também são verificados no caso de uso.
+
+**Cenários testados:** coleção vazia, combinação de nome e status, páginas e desempate por id, caracteres literais de busca, limites e entradas inválidas. Listagem não produz evento de negócio.
 
 ## UC-05 — Buscar colaboradores por departamento
 
