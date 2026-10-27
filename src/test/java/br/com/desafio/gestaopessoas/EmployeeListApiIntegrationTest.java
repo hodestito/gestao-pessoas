@@ -9,6 +9,8 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import org.hibernate.resource.jdbc.spi.StatementInspector;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,8 +20,13 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "spring.jpa.properties.hibernate.session_factory.statement_inspector=br.com.desafio.gestaopessoas.EmployeeListApiIntegrationTest$SqlCapture")
 class EmployeeListApiIntegrationTest {
+    public static class SqlCapture implements StatementInspector {
+        static final ConcurrentLinkedQueue<String> statements = new ConcurrentLinkedQueue<>();
+        @Override public String inspect(String sql) { statements.add(sql); return sql; }
+    }
     @LocalServerPort int port;
     @Autowired JdbcTemplate jdbc;
     private final UUID department = UUID.randomUUID();
@@ -34,7 +41,7 @@ class EmployeeListApiIntegrationTest {
         jdbc.update("insert into positions(id,title,level) values(?,?,?)", position, "Dev", "Senior");
         insert(first, marker + " Hugo", "ACTIVE");
         insert(second, marker + " HUGO", "INACTIVE");
-        insert(third, marker + " %literal", "ACTIVE");
+        insert(third, marker + " %literal_!end", "ACTIVE");
     }
 
     private void insert(UUID id, String name, String status) {
@@ -83,10 +90,32 @@ class EmployeeListApiIntegrationTest {
     }
 
     @Test void interpretsWildcardCharactersAsLiteralText() throws Exception {
-        var response = get("?name=" + encode(marker + " %literal"));
+        var response = get("?name=" + encode(marker + " %"));
         assertEquals(200, response.statusCode());
         assertTrue(response.body().contains(third.toString()));
         assertTrue(response.body().contains("\"totalElements\":1"));
+        var underscore = get("?name=" + encode(marker + " _"));
+        assertEquals(200, underscore.statusCode());
+        assertTrue(underscore.body().contains("\"content\":[]"));
+        var exclamation = get("?name=" + encode(marker + " %literal_!end"));
+        assertEquals(200, exclamation.statusCode());
+        assertTrue(exclamation.body().contains(third.toString()));
+        assertTrue(exclamation.body().contains("\"totalElements\":1"));
+    }
+
+    @Test void treatsSqlInjectionPayloadAsDataAndBindsTheLikeValue() throws Exception {
+        String payload = "' OR 1=1 --";
+        SqlCapture.statements.clear();
+        var response = get("?name=" + encode(payload));
+        assertEquals(200, response.statusCode());
+        assertTrue(response.body().contains("\"content\":[]"));
+        assertTrue(response.body().contains("\"totalElements\":0"));
+        assertEquals(3, jdbc.queryForObject("select count(*) from employees where id in (?,?,?)", Integer.class, first, second, third));
+        String sql = SqlCapture.statements.stream()
+                .filter(statement -> statement.toLowerCase(java.util.Locale.ROOT).contains(" like "))
+                .findFirst().orElseThrow();
+        assertTrue(sql.contains("?"), sql);
+        assertFalse(sql.toLowerCase(java.util.Locale.ROOT).contains(payload.toLowerCase(java.util.Locale.ROOT)), sql);
     }
 
     @Test void returnsEmptyPageAndRejectsInvalidParameters() throws Exception {

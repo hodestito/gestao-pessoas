@@ -9,7 +9,7 @@ Atualizado em 27/10/2026. Complementa o [modelo de domínio](domain.md). Contrat
 | UC-01 | Criar departamento | POST /departments | Implementado, sujeito à revisão do modelo. |
 | UC-02 | Criar cargo | POST /positions | Implementado, sujeito à revisão do modelo. |
 | UC-03 | Cadastrar colaborador | POST /employees | Implementado sem evento; publicação Kafka pendente. |
-| UC-04 | Listar colaboradores | GET /employees | Implementado na branch de listagem, aguardando revisão e integração. |
+| UC-04 | Listar colaboradores | GET /employees | Implementado; integração aprovada pelo responsável técnico. |
 | UC-05 | Buscar por departamento | GET /employees/search?department=RH | Em especificação. |
 | UC-06 | Inativar colaborador | DELETE /employees/{id} | Em especificação. |
 

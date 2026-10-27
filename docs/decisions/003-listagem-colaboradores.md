@@ -1,6 +1,6 @@
 # 003 — Listagem paginada de colaboradores
 
-Estado: implementado na branch feature/employee-list, aguardando revisão e aprovação antes do merge. Data: 27/10/2026.
+Estado: aprovado para integração pelo responsável técnico. Data: 27/10/2026.
 
 ## Contexto e decisões
 
@@ -18,4 +18,4 @@ Page pode exigir consulta de contagem para totalElements e totalPages. Busca par
 
 ## Verificação
 
-A suíte completa passou em H2 e PostgreSQL local com 29 testes em cada execução. Após o ajuste de limite de deslocamento, os sete testes da listagem foram executados novamente nos dois bancos, sem falhas. Não houve Testcontainers ou teste de carga.
+A suíte completa passou em H2 e PostgreSQL local com 30 testes em cada execução. Inclui testes dos caracteres literais `%`, `_` e `!`, além de uma entrada típica de SQL injection. Um StatementInspector usado somente em teste verificou que a consulta LIKE gerada contém marcador de parâmetro e não contém o texto da entrada. Não houve Testcontainers, análise de segurança abrangente ou teste de carga.
