@@ -44,7 +44,7 @@ Transferência, reativação, recontratação, edição de cadastro, exclusão d
 | Inativar colaborador produz EmployeeStatusChangedEvent. | Enunciado | Mudança de estado e publicação de eventos. |
 | Consumidores geram logs e atualizam uma tabela de histórico. | Enunciado | Consumidores de eventos e persistência do histórico. |
 
-O cadastro verifica existência e unicidade e persiste o colaborador. As constraints garantem a unicidade e as referências no banco; a transição de ACTIVE para INACTIVE existe apenas no domínio. Os eventos e o histórico ainda não estão implementados.
+O cadastro verifica existência e unicidade e persiste o colaborador. As constraints garantem a unicidade e as referências no banco; a transição de ACTIVE para INACTIVE está disponível na API nesta branch e usa controle otimista. Os eventos e o histórico ainda não estão implementados.
 
 ## Agregados e invariantes: proposta de modelagem
 
@@ -76,8 +76,8 @@ O enunciado exige serviços de domínio. Ainda precisamos identificar e justific
 
 | Tema | Proposta inicial | Questão ainda aberta |
 |---|---|---|
-| DELETE | Inativar e preservar o registro. | Confirmar resposta e tratamento da repetição. |
-| Inativação repetida | O domínio retorna false quando não há mudança. | Confirmar a resposta HTTP e ausência de evento repetido no fluxo completo. |
+| DELETE | Nesta branch, inativa e preserva o registro; retorna 204 para alteração ou repetição e 404 para id inexistente. | Revisar o fluxo completo e definir sua relação com eventos. |
+| Inativação repetida | O domínio retorna false quando não há mudança; a API responde 204 sem nova gravação. | A garantia de evento não duplicado depende do futuro desenho de publicação e consumo. |
 | Listagem | Implementada com filtro opcional por nome e status, ativos e inativos por padrão e paginação. | Avaliar desempenho e estabilidade entre requisições conforme o volume de dados. |
 | Busca por departamento | Implementada com nome exato sem distinguir caixa, paginação, todos os departamentos homônimos e lista vazia quando não há correspondência. | Avaliar requisitos de acentuação e desempenho conforme o uso. |
 
@@ -95,7 +95,7 @@ Kafka não torna a transação do banco e a publicação atômicas. Sem uma estr
 2. Linguagem compartilhada: iniciada, com definições confirmadas de inativo e cargo.
 3. Regras e cenários: em discussão; consultar a tabela de propostas.
 4. Contexto e agregados: propostos neste documento, ainda sujeitos à revisão.
-5. Modelo de Employee: criação, inativação no domínio, cadastro persistido, listagem e busca por departamento; inativação pela API e eventos estão pendentes.
+5. Modelo de Employee: criação, cadastro persistido, listagem, busca por departamento e inativação pela API implementados; eventos estão pendentes.
 6. Validação do modelo com testes: testes de domínio, aplicação e integração de cadastro com H2 e PostgreSQL; faltam testes dos demais fluxos de colaboradores e eventos.
 
 Para explicar este passo: quais regras estão confirmadas, quais são propostas e por que uma regra pode precisar da entidade, do caso de uso e do banco trabalhando juntos?

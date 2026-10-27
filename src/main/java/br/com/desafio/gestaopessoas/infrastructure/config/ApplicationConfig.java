@@ -18,4 +18,5 @@ public class ApplicationConfig {
     @Bean SearchEmployeesByDepartment searchEmployeesByDepartment(EmployeeRepository employees) {
         return new SearchEmployeesByDepartment(employees);
     }
+    @Bean DeactivateEmployee deactivateEmployee(EmployeeRepository employees) { return new DeactivateEmployee(employees); }
 }

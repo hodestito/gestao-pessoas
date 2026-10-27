@@ -17,6 +17,7 @@ public class EmployeeEntity {
     @Column(name = "position_id", nullable = false) UUID positionId;
     @Column(name = "created_at", nullable = false) Instant createdAt;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 16) EmployeeStatus status;
+    @Version @Column(nullable = false) Long version;
 
     protected EmployeeEntity() {}
 
@@ -24,6 +25,11 @@ public class EmployeeEntity {
         id = employee.id(); name = employee.name(); email = employee.email().value();
         departmentId = employee.departmentId(); positionId = employee.positionId();
         createdAt = employee.createdAt(); status = employee.status();
+    }
+
+    EmployeeEntity(Employee employee, long version) {
+        this(employee);
+        this.version = version;
     }
 
     Employee toDomain() {

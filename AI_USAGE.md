@@ -31,6 +31,7 @@
 2. **Cadastro:** após discussão, o responsável técnico aprovou e-mail único inclusive para inativos, departamento e cargo existentes, HTTP 409 para e-mail duplicado, HTTP 422 para referências inexistentes e uma transação por cadastro. Uma constraint no banco complementa a consulta prévia de e-mail.
 3. **Listagem e busca:** o responsável técnico escolheu `Page` do Spring Data. A IA implementou filtros e paginação, e documentou o acoplamento, o custo potencial de contagem e os limites de paginação por deslocamento. A busca por departamento foi implementada com correspondência exata sem diferenciar caixa; departamentos homônimos são incluídos.
 4. **Mensageria:** Kafka foi escolhido pelo responsável técnico. A estratégia de consistência entre banco e broker, inclusive eventual Outbox, será decidida no incremento de eventos.
+5. **Inativação e concorrência:** o responsável técnico escolheu `@Version` após comparar bloqueio otimista, pessimista e atualização condicional. A IA implementou a inativação com releitura limitada após conflito, testes de concorrência e documentação da decisão. A emissão do evento continua pendente.
 
 ## Limitações e como foram tratadas
 
