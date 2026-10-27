@@ -2,6 +2,14 @@
 
 Projeto em construção para o desafio técnico. Os primeiros fluxos implementados são a criação de departamentos e cargos; os fluxos de colaboradores e eventos ainda estão pendentes.
 
+## Documentação e evolução
+
+- [Domínio](docs/domain.md): linguagem compartilhada, regras confirmadas, propostas e situação da modelagem DDD.
+- [Casos de uso](docs/use-cases.md): os seis fluxos, contratos existentes/propostos e cenários de aceitação.
+- [Uso de IA](AI_USAGE.md): participação da IA e padrão dos commits identificados com `[IA]`.
+
+Os documentos distinguem requisitos do enunciado, definições do candidato, propostas e comportamento implementado. O Git registra a evolução real; os documentos apresentam o entendimento atual. A arquitetura detalhada e os registros individuais de decisão serão acrescentados conforme discutirmos essas decisões.
+
 ## Base escolhida
 
 - Java 21 e Spring Boot 4.1.2
