@@ -1,12 +1,12 @@
 # 004 — Busca de colaboradores por departamento
 
-Estado: implementado para revisão na branch feature/employee-department-search; merge ainda não aprovado. Data: 27/10/2026.
+Estado: implementação revisada e integração à main autorizada pelo responsável técnico. Data: 27/10/2026.
 
 ## Contexto e decisão proposta
 
 O enunciado exige `GET /employees/search?department=RH`, sem definir se a busca é parcial nem o tratamento de nomes repetidos. Foi implementada a correspondência exata, sem diferenciar caixa, depois de remover espaços nas extremidades. Nomes de departamento não são únicos no modelo atual: todos os departamentos homônimos são incluídos, com colaboradores ativos e inativos.
 
-Parâmetro ausente/vazio ou paginação inválida retorna 400; departamento sem correspondência retorna 200 com página vazia. As respostas usam Page e o mesmo contrato, limites e ordenação da listagem geral. O responsável técnico deverá validar esses comportamentos antes do merge.
+Parâmetro ausente/vazio ou paginação inválida retorna 400; departamento sem correspondência retorna 200 com página vazia. As respostas usam Page e o mesmo contrato, limites e ordenação da listagem geral.
 
 ## Implementação e alternativas
 

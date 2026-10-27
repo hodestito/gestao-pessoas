@@ -10,7 +10,7 @@ Atualizado em 27/10/2026. Complementa o [modelo de domínio](domain.md). Contrat
 | UC-02 | Criar cargo | POST /positions | Implementado, sujeito à revisão do modelo. |
 | UC-03 | Cadastrar colaborador | POST /employees | Implementado sem evento; publicação Kafka pendente. |
 | UC-04 | Listar colaboradores | GET /employees | Implementado; integração aprovada pelo responsável técnico. |
-| UC-05 | Buscar por departamento | GET /employees/search?department=RH | Implementado na branch de busca, aguardando revisão. |
+| UC-05 | Buscar por departamento | GET /employees/search?department=RH | Implementado, com integração autorizada pelo responsável técnico. |
 | UC-06 | Inativar colaborador | DELETE /employees/{id} | Em especificação. |
 
 O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo de autenticação/autorização implementado. O enunciado não define papéis de acesso.

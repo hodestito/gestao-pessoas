@@ -1,38 +1,45 @@
-# Uso de IA Generativa
+# Uso de IA Generativa no Projeto
 
-## Ferramenta
+## Ferramentas utilizadas
 
-Codex/ChatGPT auxiliou na preparação do ambiente e na implementação incremental, com o desafio e as decisões acompanhados pelo candidato.
+- **Codex/ChatGPT:** apoio à modelagem de domínio, discussão de alternativas, implementação, testes e documentação. O responsável técnico revisa as propostas e toma as decisões arquiteturais.
+- **Spring Initializr:** gerou a estrutura inicial do projeto; não é uma ferramenta de IA.
 
-## Trabalho realizado até agora
+## Prompts e interações efetivas
 
-- A partir do enunciado, foram identificados os requisitos de domínio, arquitetura, testes e entrega.
-- O Spring Initializr gerou a base Java 21/Spring Boot; o projeto foi testado com H2 e configurado para PostgreSQL local.
-- O primeiro incremento separou domínio, casos de uso, adaptadores JPA e API; testes verificam validação e persistência.
-- Em 27/10/2026, após a revisão do enunciado pelo candidato, foram documentados vocabulário, regras confirmadas, propostas de agregados e os seis casos de uso. Os documentos deixam explícito o que ainda não foi implementado ou confirmado.
+### Modelagem de domínio
 
-## Interações relevantes para a modelagem
+**Pergunta:** “Temos um arquitetura definida? Usamos DDD antes de começar a criar classes?”
 
-- O candidato perguntou se a arquitetura e o DDD haviam sido definidos antes das classes. A revisão identificou que a separação técnica de camadas já existia, mas a modelagem de domínio estava incompleta.
-- O candidato definiu inativo como quem saiu da empresa, equiparou cargo e posição, exigiu departamento existente e e-mail único. A IA organizou essas definições em `docs/domain.md` e `docs/use-cases.md`, preservando como propostas as demais escolhas.
-- O candidato indicou interesse em Outbox sem aumentar a complexidade agora. A IA propôs Spring Events; após o candidato questionar a preferência do enunciado por Kafka, comparou as opções. O candidato aprovou Kafka e deixou a decisão sobre Outbox para o incremento de eventos.
-- Para o modelo inicial de Employee, o candidato aprovou comparação de e-mail sem distinção de caixa e com remoção de espaços externos, unicidade inclusive para inativos, exigência de cargo existente e limite de 120 caracteres para nome. A IA implementou o modelo e seus testes unitários; naquela etapa, persistência e garantias entre registros ainda estavam pendentes.
-- Para o cadastro, o candidato aprovou HTTP 409 para e-mail duplicado, 422 para referências inexistentes, uma transação por cadastro e uso de UUID/relógio controlável. A IA implementou o fluxo, migração e testes, explicando a verificação prévia e a constraint de banco. A publicação Kafka permanece pendente.
-- Para a listagem, o candidato escolheu Page e questionou como oferecer busca útil a pessoas sem depender de UUID. A IA propôs filtros opcionais por nome e status, manteve UUID e implementou a consulta e os testes na branch feature/employee-list, registrando o acoplamento ao Spring Data e os limites em `docs/decisions/003-listagem-colaboradores.md`.
-- Na revisão do PR, o candidato questionou SQL injection e solicitou testes adicionais. A IA distinguiu parametrização da consulta de escape dos curingas LIKE, implementou testes dos caracteres especiais e da entrada `' OR 1=1 --`, e verificou com StatementInspector, apenas nos testes, o marcador JDBC na consulta gerada. O candidato autorizou o merge após esses testes.
-- Após o merge aprovado do PR #1, o candidato solicitou avançar ao próximo passo durante o almoço. A IA implementou na branch feature/employee-department-search a busca exigida por departamento, com nome exato sem distinguir caixa e departamentos homônimos incluídos; esses critérios são escolhas documentadas para revisão, não regras expressas pelo enunciado. Foram adicionados testes de comportamento e de parametrização SQL em H2 e PostgreSQL.
-- A pedido do candidato para entender cada passo, adotamos o ciclo entender, decidir, implementar, testar, revisar e versionar. Na etapa inicial de documentação houve revisão documental e conferência com o código; não foram executados novos testes de aplicação naquela etapa.
+**Resultado:** a revisão identificou que a separação técnica em camadas já existia, mas a modelagem de domínio estava incompleta. Foram documentados linguagem compartilhada, regras confirmadas, hipóteses e casos de uso em `docs/domain.md` e `docs/use-cases.md`.
 
-## Decisões e limitações
+### Escolha de mensageria
 
-- O domínio não depende de frameworks; o código de infraestrutura implementa as interfaces de persistência declaradas pela aplicação.
-- O cargo aceita nível como texto, pois o enunciado apresenta exemplos e não especifica uma lista fechada. A unicidade de código de centro de custo também não foi presumida.
-- Esta documentação é inicial e deve ser atualizada com prompts, revisões, decisões e limitações reais conforme o projeto evoluir. A implementação ainda não atende a todos os requisitos.
+**Pergunta:** “Por que Sprint Events e não Kafka que é o recomendado?”
 
-## Versionamento e identificação do auxílio de IA
+**Resultado:** foram comparados Spring Events e Kafka. O responsável técnico escolheu Kafka, em linha com a preferência do enunciado. A definição de Outbox e a implementação dos eventos permanecem pendentes.
 
-O versionamento começou após a preparação do ambiente e o primeiro incremento de departamentos e cargos. O primeiro commit registra esse estado; não representa uma sequência de commits feita durante as etapas anteriores.
+### Consulta e segurança
 
-Commits com auxílio de IA usam o marcador `[IA]` no título, por exemplo: `feat: cadastra colaborador [IA]`. O corpo descreve o auxílio recebido, as decisões relevantes e as verificações efetivamente executadas. A autoria Git permanece a do candidato; auxílio de IA não implica revisão ou aprovação humana já realizada.
+**Pergunta:** “Estamos seguros contra injection?”
 
-Cada incremento deve ter um commit coerente, incluindo seus testes e documentação quando aplicável. Decisões de modelagem podem ter commits próprios. Não registrar ferramentas instaladas, resultados de build, configurações pessoais da IDE ou segredos.
+**Resultado:** foram distinguidos a parametrização JDBC e o escape de curingas do `LIKE`. A revisão resultou em testes de caracteres especiais, tentativa de SQL injection e inspeção do SQL gerado, executados em H2 e PostgreSQL.
+
+## Decisões influenciadas por IA e revisão técnica
+
+1. **Domínio e arquitetura:** a IA propôs uma organização em camadas e a separação do domínio de frameworks. O modelo foi revisto com o responsável técnico; os limites e as decisões permanecem documentados em `docs/decisions/`.
+2. **Cadastro:** após discussão, o responsável técnico aprovou e-mail único inclusive para inativos, departamento e cargo existentes, HTTP 409 para e-mail duplicado, HTTP 422 para referências inexistentes e uma transação por cadastro. Uma constraint no banco complementa a consulta prévia de e-mail.
+3. **Listagem e busca:** o responsável técnico escolheu `Page` do Spring Data. A IA implementou filtros e paginação, e documentou o acoplamento, o custo potencial de contagem e os limites de paginação por deslocamento. A busca por departamento foi implementada com correspondência exata sem diferenciar caixa; departamentos homônimos são incluídos.
+4. **Mensageria:** Kafka foi escolhido pelo responsável técnico. A estratégia de consistência entre banco e broker, inclusive eventual Outbox, será decidida no incremento de eventos.
+
+## Limitações e como foram tratadas
+
+- A primeira implementação começou antes de uma modelagem de domínio suficientemente discutida. Após revisão, foram registrados vocabulário, invariantes, casos de uso, propostas e decisões pendentes antes dos incrementos seguintes.
+- A primeira proposta de eventos usava Spring Events para reduzir complexidade, embora o enunciado prefira Kafka. Após questionamento e comparação das alternativas, o responsável técnico escolheu Kafka.
+- A normalização de e-mail, isoladamente, não garante unicidade sob concorrência. Foi adicionada uma restrição no banco e testes de concorrência e duplicidade, inclusive para colaboradores inativos.
+- O escape dos caracteres do `LIKE` não protege sozinho contra SQL injection. A consulta usa parâmetros e foram adicionados testes com entrada maliciosa e inspeção do SQL gerado; isso não constitui uma auditoria de segurança completa.
+- Os testes de PostgreSQL dependem de uma instância local já disponível. Eles exercitam um banco real, mas não são isolados por Testcontainers; a adoção de contêineres descartáveis permanece para decisão.
+
+## Versionamento
+
+Commits com auxílio de IA são identificados com `[IA]` e descrevem o incremento e as verificações realizadas. O versionamento começou após a base inicial de departamentos e cargos; o primeiro commit registra o estado existente, sem simular commits retroativos. O fluxo atual utiliza branches curtas a partir de `main` e integração após revisão e aprovação do responsável técnico.

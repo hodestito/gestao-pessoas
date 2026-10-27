@@ -79,7 +79,7 @@ O enunciado exige serviços de domínio. Ainda precisamos identificar e justific
 | DELETE | Inativar e preservar o registro. | Confirmar resposta e tratamento da repetição. |
 | Inativação repetida | O domínio retorna false quando não há mudança. | Confirmar a resposta HTTP e ausência de evento repetido no fluxo completo. |
 | Listagem | Implementada com filtro opcional por nome e status, ativos e inativos por padrão e paginação. | Avaliar desempenho e estabilidade entre requisições conforme o volume de dados. |
-| Busca por departamento | Implementada nesta branch com nome exato sem distinguir caixa, paginação, todos os departamentos homônimos e lista vazia quando não há correspondência. | Critérios adotados nesta etapa aguardam revisão do responsável técnico. |
+| Busca por departamento | Implementada com nome exato sem distinguir caixa, paginação, todos os departamentos homônimos e lista vazia quando não há correspondência. | Avaliar requisitos de acentuação e desempenho conforme o uso. |
 
 O limite de 120 caracteres para o nome de Employee foi aprovado pelo candidato. Limites de nome de departamento, centro de custo, título e nível são decisões técnicas iniciais, ainda não confirmadas como regras de negócio. Nível do cargo está como texto, sem lista fechada, e o código não exige unicidade de nome de departamento ou centro de custo.
 
