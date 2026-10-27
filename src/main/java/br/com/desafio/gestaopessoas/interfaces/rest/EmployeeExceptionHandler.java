@@ -3,6 +3,7 @@ package br.com.desafio.gestaopessoas.interfaces.rest;
 import br.com.desafio.gestaopessoas.application.EmployeeRegistrationException;
 import java.util.Locale;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -24,6 +25,11 @@ public class EmployeeExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     ResponseEntity<ErrorResponse> invalidDomainValue(IllegalArgumentException exception) {
         return response(HttpStatus.BAD_REQUEST, "INVALID_INPUT", exception.getMessage());
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    ResponseEntity<ErrorResponse> concurrentModification(OptimisticLockingFailureException exception) {
+        return response(HttpStatus.CONFLICT, "CONCURRENT_MODIFICATION", "Colaborador alterado concorrentemente; tente novamente");
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

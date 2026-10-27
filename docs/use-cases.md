@@ -11,7 +11,7 @@ Atualizado em 27/10/2026. Complementa o [modelo de domínio](domain.md). Contrat
 | UC-03 | Cadastrar colaborador | POST /employees | Implementado sem evento; publicação Kafka pendente. |
 | UC-04 | Listar colaboradores | GET /employees | Implementado; integração aprovada pelo responsável técnico. |
 | UC-05 | Buscar por departamento | GET /employees/search?department=RH | Implementado, com integração autorizada pelo responsável técnico. |
-| UC-06 | Inativar colaborador | DELETE /employees/{id} | Em especificação. |
+| UC-06 | Inativar colaborador | DELETE /employees/{id} | Implementado nesta branch; evento e revisão do PR pendentes. |
 
 O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo de autenticação/autorização implementado. O enunciado não define papéis de acesso.
 
@@ -93,15 +93,15 @@ O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo 
 
 ## UC-06 — Inativar colaborador
 
-**Regra confirmada:** inativo representa pessoa que saiu da empresa. Preservar o registro ao atender DELETE é uma proposta coerente com o evento de mudança de status pedido pelo enunciado; ainda será revisada com o candidato.
+**Regra confirmada:** inativo representa pessoa que saiu da empresa. DELETE preserva o registro e altera o estado de ativo para inativo.
 
-**Fluxo proposto:** localizar Employee; executar seu comportamento de inativação; persistir a mudança em uma transação; produzir EmployeeStatusChangedEvent após uma transição efetiva; retornar 204.
+**Fluxo implementado:** localizar Employee e sua versão; executar o comportamento de inativação; persistir a mudança em uma transação e retornar 204. A emissão de EmployeeStatusChangedEvent ainda não foi implementada.
 
-**Tratamento proposto de repetição:** se já estiver inativo, retornar 204 e não produzir outro evento de mudança. Identificador malformado retorna 400; inexistente retorna 404.
+**Tratamento de repetição:** se já estiver inativo, retornar 204 sem nova gravação. Identificador malformado retorna 400; inexistente retorna 404. Ainda não há eventos para publicar.
 
-**Concorrência:** duas inativações simultâneas precisam ser tratadas para não confirmar duas transições/eventos para o mesmo desligamento. Escolher a estratégia de concorrência ao implementar e cobri-la com teste.
+**Concorrência:** o responsável técnico escolheu bloqueio otimista com `@Version`. Uma alteração com versão antiga falha; após rollback, é feita uma nova tentativa em outra transação. Se ocorrer novo conflito, a API retorna 409. O controle depende de escritores que respeitem e atualizem a versão. Ele não resolve, sozinho, publicação durável ou duplicação de eventos.
 
-**Cenários a implementar:** ativo torna-se inativo mantendo seus dados; inexistente retorna erro; repetição não duplica mudança nem evento; rollback não confirma desligamento; falha do consumidor não transforma cadastro já inativado em ativo.
+**Cenários testados:** ativo torna-se inativo mantendo seus dados; inexistente retorna erro; repetição não faz nova gravação; duas requisições simultâneas retornam 204 com uma única alteração; uma gravação com versão antiga é rejeitada. Falha e deduplicação de eventos serão testadas no incremento de mensageria.
 
 ## Consumo assíncrono transversal
 

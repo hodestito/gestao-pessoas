@@ -1,10 +1,13 @@
 package br.com.desafio.gestaopessoas.infrastructure.persistence;
 
 import br.com.desafio.gestaopessoas.application.EmployeeRepository;
+import br.com.desafio.gestaopessoas.application.VersionedEmployee;
 import br.com.desafio.gestaopessoas.domain.employee.Email;
 import br.com.desafio.gestaopessoas.domain.employee.Employee;
 import br.com.desafio.gestaopessoas.domain.employee.EmployeeStatus;
 import java.util.Locale;
+import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -16,6 +19,14 @@ public class EmployeePersistenceAdapter implements EmployeeRepository {
     EmployeePersistenceAdapter(EmployeeJpaRepository repository) { this.repository = repository; }
     public boolean existsByEmail(Email email) { return repository.existsByEmail(email.value()); }
     public Employee save(Employee employee) { return repository.saveAndFlush(new EmployeeEntity(employee)).toDomain(); }
+
+    public Optional<VersionedEmployee> findVersionedById(UUID id) {
+        return repository.findById(id).map(entity -> new VersionedEmployee(entity.toDomain(), entity.version));
+    }
+
+    public void saveVersioned(VersionedEmployee snapshot) {
+        repository.saveAndFlush(new EmployeeEntity(snapshot.employee(), snapshot.version()));
+    }
 
     public Page<Employee> findByDepartmentName(String department, Pageable pageable) {
         return repository.searchByDepartment(department, pageable).map(EmployeeEntity::toDomain);

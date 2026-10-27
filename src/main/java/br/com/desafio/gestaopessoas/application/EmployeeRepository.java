@@ -5,10 +5,14 @@ import br.com.desafio.gestaopessoas.domain.employee.Employee;
 import br.com.desafio.gestaopessoas.domain.employee.EmployeeStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import java.util.Optional;
+import java.util.UUID;
 
 public interface EmployeeRepository {
     boolean existsByEmail(Email email);
     Employee save(Employee employee);
     Page<Employee> findAll(String name, EmployeeStatus status, Pageable pageable);
     Page<Employee> findByDepartmentName(String department, Pageable pageable);
+    Optional<VersionedEmployee> findVersionedById(UUID id);
+    void saveVersioned(VersionedEmployee employee);
 }
