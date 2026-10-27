@@ -17,7 +17,13 @@
 
 **Pergunta:** “Por que Sprint Events e não Kafka que é o recomendado?”
 
-**Resultado:** foram comparados Spring Events e Kafka. O responsável técnico escolheu Kafka, em linha com a preferência do enunciado. A definição de Outbox e a implementação dos eventos permanecem pendentes.
+**Resultado:** foram comparados Spring Events e Kafka. O responsável técnico escolheu Kafka, em linha com a preferência do enunciado. Posteriormente aprovou Outbox para eliminar a janela entre commit e registro da intenção de publicação.
+
+### Consistência e entrega de eventos
+
+**Perguntas e instrução:** “O quanto acrescentaria de complexidade se consideramos outbox?” e “Implemente com outbox”.
+
+**Resultado:** a proposta de listener AFTER_COMMIT foi substituída por Outbox transacional com polling. A IA implementou o fluxo de cadastro, publicação Kafka e histórico idempotente. Foram explicitados reenvios, falhas de confirmação, bloqueio de linha durante o envio e o limite de uma instância validada. O evento de inativação fica para o incremento seguinte.
 
 ### Consulta e segurança
 
@@ -30,7 +36,7 @@
 1. **Domínio e arquitetura:** a IA propôs uma organização em camadas e a separação do domínio de frameworks. O modelo foi revisto com o responsável técnico; os limites e as decisões permanecem documentados em `docs/decisions/`.
 2. **Cadastro:** após discussão, o responsável técnico aprovou e-mail único inclusive para inativos, departamento e cargo existentes, HTTP 409 para e-mail duplicado, HTTP 422 para referências inexistentes e uma transação por cadastro. Uma constraint no banco complementa a consulta prévia de e-mail.
 3. **Listagem e busca:** o responsável técnico escolheu `Page` do Spring Data. A IA implementou filtros e paginação, e documentou o acoplamento, o custo potencial de contagem e os limites de paginação por deslocamento. A busca por departamento foi implementada com correspondência exata sem diferenciar caixa; departamentos homônimos são incluídos.
-4. **Mensageria:** Kafka foi escolhido pelo responsável técnico. A estratégia de consistência entre banco e broker, inclusive eventual Outbox, será decidida no incremento de eventos.
+4. **Mensageria:** Kafka e Outbox foram escolhidos pelo responsável técnico após comparação de alternativas. Empregado e evento são gravados na mesma transação; o publicador aguarda confirmação do broker e o consumidor deduplica por eventId. A implementação usa JDBC para Outbox/histórico e JPA para os agregados, compartilhando a transação do cadastro.
 5. **Inativação e concorrência:** o responsável técnico escolheu `@Version` após comparar bloqueio otimista, pessimista e atualização condicional. A IA implementou a inativação com releitura limitada após conflito, testes de concorrência e documentação da decisão. A emissão do evento continua pendente.
 
 ## Limitações e como foram tratadas
@@ -40,6 +46,7 @@
 - A normalização de e-mail, isoladamente, não garante unicidade sob concorrência. Foi adicionada uma restrição no banco e testes de concorrência e duplicidade, inclusive para colaboradores inativos.
 - O escape dos caracteres do `LIKE` não protege sozinho contra SQL injection. A consulta usa parâmetros e foram adicionados testes com entrada maliciosa e inspeção do SQL gerado; isso não constitui uma auditoria de segurança completa.
 - Os testes de PostgreSQL dependem de uma instância local já disponível. Eles exercitam um banco real, mas não são isolados por Testcontainers; a adoção de contêineres descartáveis permanece para decisão.
+- A proposta inicial AFTER_COMMIT mantinha uma janela de perda após confirmar o cadastro. A Outbox resolve a gravação atômica de empregado e intenção, mas permite reenvios. Foram acrescentados testes de rollback conjunto, falha na publicação e na marcação, consumidor com falha transitória e duplicatas com Kafka real. PostgreSQL usa uma base exclusiva de testes; H2 em memória não representa durabilidade após reinício.
 
 ## Versionamento
 
