@@ -44,7 +44,7 @@ Transferência, reativação, recontratação, edição de cadastro, exclusão d
 | Inativar colaborador produz EmployeeStatusChangedEvent. | Enunciado | Mudança de estado e publicação de eventos. |
 | Consumidores geram logs e atualizam uma tabela de histórico. | Enunciado | Consumidores de eventos e persistência do histórico. |
 
-As verificações de existência e unicidade, os eventos e o histórico ainda não estão implementados. A transição de ACTIVE para INACTIVE foi implementada no domínio.
+O cadastro verifica existência e unicidade e persiste o colaborador. As constraints garantem a unicidade e as referências no banco; a transição de ACTIVE para INACTIVE existe apenas no domínio. Os eventos e o histórico ainda não estão implementados.
 
 ## Agregados e invariantes: proposta de modelagem
 
@@ -68,7 +68,7 @@ Por exemplo, consultar um e-mail antes de gravar não resolve a concorrência: d
 
 ### Objetos de valor e serviços de domínio
 
-CostCenterCode e Email são objetos de valor. Email remove espaços nas extremidades e converte para minúsculas com `Locale.ROOT`, para a comparação aprovada pelo candidato. O formato implementado é uma política simples com limite técnico de 254 caracteres; não cobre todos os endereços possíveis nas RFCs nem comprova que o endereço exista. A unicidade entre colaboradores ainda depende de persistência e constraint no banco.
+CostCenterCode e Email são objetos de valor. Email remove espaços nas extremidades e converte para minúsculas com `Locale.ROOT`, para a comparação aprovada pelo candidato. O formato implementado é uma política simples com limite técnico de 254 caracteres; não cobre todos os endereços possíveis nas RFCs nem comprova que o endereço exista. A unicidade entre colaboradores é protegida por constraint no banco; outra constraint exige que o valor gravado esteja em minúsculas e sem espaços externos.
 
 O enunciado exige serviços de domínio. Ainda precisamos identificar e justificar qual regra de negócio, independente de frameworks, deve ser expressa por esse serviço. Os casos de uso existentes são serviços de aplicação; não devem ser apresentados como serviços de domínio apenas para cumprir a nomenclatura.
 
@@ -95,7 +95,7 @@ Kafka não torna a transação do banco e a publicação atômicas. Sem uma estr
 2. Linguagem compartilhada: iniciada, com definições confirmadas de inativo e cargo.
 3. Regras e cenários: em discussão; consultar a tabela de propostas.
 4. Contexto e agregados: propostos neste documento, ainda sujeitos à revisão.
-5. Modelo de Employee: criação e inativação iniciadas; persistência, referências existentes, unicidade e limites transacionais ainda pendentes.
-6. Validação do modelo com testes: testes de domínio para departamentos, cargos e Employee; falta testar os fluxos completos de colaboradores.
+5. Modelo de Employee: criação, inativação no domínio e cadastro persistido com transação; consultas, inativação pela API e eventos estão pendentes.
+6. Validação do modelo com testes: testes de domínio, aplicação e integração de cadastro com H2 e PostgreSQL; faltam testes dos demais fluxos de colaboradores e eventos.
 
 Para explicar este passo: quais regras estão confirmadas, quais são propostas e por que uma regra pode precisar da entidade, do caso de uso e do banco trabalhando juntos?

@@ -1,14 +1,15 @@
 # Gestão de pessoas — desafio técnico
 
-Projeto em construção para o desafio técnico. Os primeiros fluxos implementados são a criação de departamentos e cargos; os fluxos de colaboradores e eventos ainda estão pendentes.
+Projeto em construção para o desafio técnico. Estão implementados a criação de departamentos, cargos e colaboradores; consultas, inativação via API e eventos ainda estão pendentes.
 
-O modelo de domínio de Employee já contempla criação ativa, e-mail normalizado e inativação; ainda não há endpoint, persistência de colaboradores nem eventos.
+Employee contempla criação ativa, e-mail normalizado e inativação no domínio. A API de cadastro persiste o colaborador; ainda não publica eventos.
 
 ## Documentação e evolução
 
 - [Domínio](docs/domain.md): linguagem compartilhada, regras confirmadas, propostas e situação da modelagem DDD.
 - [Casos de uso](docs/use-cases.md): os seis fluxos, contratos existentes/propostos e cenários de aceitação.
 - [Decisão 001](docs/decisions/001-employee-e-kafka.md): identidade de Employee, regras aprovadas e direção para Kafka.
+- [Decisão 002](docs/decisions/002-cadastro-employee.md): transação, persistência e respostas do cadastro.
 - [Uso de IA](AI_USAGE.md): participação da IA e padrão dos commits identificados com `[IA]`.
 
 Os documentos distinguem requisitos do enunciado, definições do candidato, propostas e comportamento implementado. O Git registra a evolução real; os documentos apresentam o entendimento atual. A arquitetura detalhada e outros registros de decisão serão acrescentados conforme discutirmos essas decisões.
@@ -17,7 +18,7 @@ Os documentos distinguem requisitos do enunciado, definições do candidato, pro
 
 - Java 21 e Spring Boot 4.1.2
 - Maven Wrapper, Spring Web, JPA, Flyway, validação, Actuator, H2 e driver PostgreSQL
-- H2 é o banco usado por padrão; PostgreSQL pode ser selecionado pelo perfil `postgres`. O Flyway cria as tabelas de departamentos e cargos.
+- H2 é o banco usado por padrão; PostgreSQL pode ser selecionado pelo perfil `postgres`. O Flyway cria as tabelas de departamentos, cargos e colaboradores.
 
 ## Primeiro incremento
 
@@ -28,7 +29,10 @@ Exemplos com a aplicação em execução na porta 8080:
 ```sh
 curl -X POST http://localhost:8080/departments -H 'Content-Type: application/json' -d '{"name":"RH","costCenterCode":"CC-01"}'
 curl -X POST http://localhost:8080/positions -H 'Content-Type: application/json' -d '{"title":"Engenheiro","level":"Sênior"}'
+curl -X POST http://localhost:8080/employees -H 'Content-Type: application/json' -d '{"name":"Hugo","email":"hugo@example.com","departmentId":"UUID-DO-DEPARTAMENTO","positionId":"UUID-DO-CARGO"}'
 ```
+
+Substitua os identificadores pelos UUIDs retornados pelos dois primeiros cadastros. E-mail duplicado retorna 409; departamento ou cargo inexistente retorna 422. O cadastro de colaboradores ainda não emite o evento obrigatório, que será implementado no incremento de eventos com Kafka.
 
 ## Primeira verificação
 
@@ -53,8 +57,8 @@ Para iniciar a aplicação usando esse banco: `./mvnw spring-boot:run -Dspring-b
 
 ## Próximos incrementos
 
-1. Modelar colaboradores com domínio independente de framework.
-2. Implementar os casos de uso, persistência com migrações e endpoints restantes.
+1. Implementar listagem, busca e inativação de colaboradores.
+2. Revisar regras de domínio e casos de uso com o responsável técnico.
 3. Implementar e testar publicação e consumo assíncronos com histórico.
 4. Acrescentar testes de integração, Docker, documentação da API e registro do uso de IA.
 

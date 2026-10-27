@@ -15,18 +15,23 @@ public final class Employee {
     private final Instant createdAt;
     private EmployeeStatus status;
 
-    private Employee(UUID id, String name, Email email, UUID departmentId, UUID positionId, Instant createdAt) {
+    private Employee(UUID id, String name, Email email, UUID departmentId, UUID positionId, Instant createdAt, EmployeeStatus status) {
         this.id = Objects.requireNonNull(id, "id");
         this.name = RequiredText.normalize(name, "name", 120);
         this.email = Objects.requireNonNull(email, "email");
         this.departmentId = Objects.requireNonNull(departmentId, "departmentId");
         this.positionId = Objects.requireNonNull(positionId, "positionId");
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
-        this.status = EmployeeStatus.ACTIVE;
+        this.status = Objects.requireNonNull(status, "status");
     }
 
     public static Employee create(UUID id, String name, Email email, UUID departmentId, UUID positionId, Instant createdAt) {
-        return new Employee(id, name, email, departmentId, positionId, createdAt);
+        return new Employee(id, name, email, departmentId, positionId, createdAt, EmployeeStatus.ACTIVE);
+    }
+
+    /** Reconstitui um estado persistido sem aplicar as regras de uma nova contratação. */
+    public static Employee restore(UUID id, String name, Email email, UUID departmentId, UUID positionId, Instant createdAt, EmployeeStatus status) {
+        return new Employee(id, name, email, departmentId, positionId, createdAt, status);
     }
 
     /** Retorna true apenas quando ocorreu uma transição. */

@@ -54,4 +54,11 @@ class EmployeeTest {
         assertEquals(first.hashCode(), sameIdentity.hashCode());
         assertNotEquals(first, differentIdentity);
     }
+
+    @Test void restoresPersistedInactiveEmployee() {
+        Employee restored = Employee.restore(ID, "Hugo", new Email("hugo@example.com"), DEPARTMENT_ID, POSITION_ID, CREATED_AT, EmployeeStatus.INACTIVE);
+        assertEquals(EmployeeStatus.INACTIVE, restored.status());
+        assertEquals(CREATED_AT, restored.createdAt());
+        assertFalse(restored.deactivate());
+    }
 }

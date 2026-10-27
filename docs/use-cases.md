@@ -8,7 +8,7 @@ Atualizado em 27/10/2026. Complementa o [modelo de domínio](domain.md). Contrat
 |---|---|---|---|
 | UC-01 | Criar departamento | POST /departments | Implementado, sujeito à revisão do modelo. |
 | UC-02 | Criar cargo | POST /positions | Implementado, sujeito à revisão do modelo. |
-| UC-03 | Cadastrar colaborador | POST /employees | Em especificação. |
+| UC-03 | Cadastrar colaborador | POST /employees | Implementado sem evento; publicação Kafka pendente. |
 | UC-04 | Listar colaboradores | GET /employees | Em especificação. |
 | UC-05 | Buscar por departamento | GET /employees/search?department=RH | Em especificação. |
 | UC-06 | Inativar colaborador | DELETE /employees/{id} | Em especificação. |
@@ -45,28 +45,27 @@ O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo 
 
 ## UC-03 — Cadastrar colaborador
 
-**Entrada proposta:** name, email, departmentId e positionId. O sistema gera id e createdAt; ACTIVE como status inicial é uma proposta.
+**Entrada implementada:** name, email, departmentId e positionId. O sistema gera id e createdAt; o estado inicial é ACTIVE.
 
 **Regras confirmadas:** departamento e cargo devem existir; e-mail é único mesmo entre inativos, comparado sem diferenciar caixa e com espaços das extremidades removidos; nome tem até 120 caracteres. Criar Employee como ACTIVE foi aprovado para o modelo inicial.
 
-**Fluxo proposto:**
+**Fluxo implementado:**
 
 1. Validar a estrutura da requisição e os valores do domínio.
 2. Consultar as referências de departamento e cargo.
 3. Verificar disponibilidade do e-mail para antecipar uma resposta compreensível.
 4. Criar Employee e salvar em uma transação protegida por unicidade e chaves estrangeiras no banco.
-5. Produzir EmployeeCreatedEvent por Kafka. O mecanismo e suas garantias serão definidos no incremento de eventos.
-6. Retornar 201 com os dados do colaborador criado.
+5. Retornar 201 com os dados do colaborador criado. O fluxo ainda não emite EmployeeCreatedEvent; Kafka e suas garantias serão definidos no incremento de eventos.
 
-**Erros HTTP propostos:** 400 para valores/identificadores malformados; 422 para referências inexistentes; 409 para e-mail duplicado. Esses códigos são escolhas de contrato, não exigências expressas do enunciado. Uma falha não prevista de infraestrutura deve ser distinguida dos erros de negócio.
+**Erros HTTP implementados:** 400 para valores/identificadores malformados; 422 para referências inexistentes; 409 para e-mail duplicado. Esses códigos foram aprovados pelo responsável técnico, não são exigências expressas do enunciado. Violações inesperadas de integridade não são transformadas em erros de negócio conhecidos.
 
-**Cenários de aceitação a implementar:**
+**Cenários verificados e pendentes:**
 
-- Dados válidos e referências existentes criam um colaborador e produzem o evento exigido.
+- Dados válidos e referências existentes criam um colaborador. Produzir o evento exigido ainda está pendente.
 - Departamento inexistente impede o cadastro, sem colaborador nem evento de criação confirmado.
 - Cargo inexistente impede o cadastro.
 - Duas requisições simultâneas com o mesmo e-mail produzem somente um cadastro; a outra recebe conflito.
-- Rollback da gravação impede o consumo de um evento de criação confirmada.
+- Rollback impedindo consumo de evento deve ser testado no incremento de eventos.
 
 **Limite da garantia:** a resposta de criação não garante que o histórico assíncrono já tenha sido gravado. Sem uma estratégia como Outbox, existe uma janela de perda entre a gravação e a publicação no Kafka.
 
