@@ -79,7 +79,7 @@ O enunciado exige serviços de domínio. Ainda precisamos identificar e justific
 | DELETE | Inativar e preservar o registro. | Confirmar resposta e tratamento da repetição. |
 | Inativação repetida | O domínio retorna false quando não há mudança. | Confirmar a resposta HTTP e ausência de evento repetido no fluxo completo. |
 | Listagem | Implementada com filtro opcional por nome e status, ativos e inativos por padrão e paginação. | Avaliar desempenho e estabilidade entre requisições conforme o volume de dados. |
-| Busca | Nome exato do departamento, sem distinguir caixa, com paginação. | Definir comportamento para nomes repetidos e departamento inexistente. |
+| Busca por departamento | Implementada nesta branch com nome exato sem distinguir caixa, paginação, todos os departamentos homônimos e lista vazia quando não há correspondência. | Critérios adotados nesta etapa aguardam revisão do responsável técnico. |
 
 O limite de 120 caracteres para o nome de Employee foi aprovado pelo candidato. Limites de nome de departamento, centro de custo, título e nível são decisões técnicas iniciais, ainda não confirmadas como regras de negócio. Nível do cargo está como texto, sem lista fechada, e o código não exige unicidade de nome de departamento ou centro de custo.
 
@@ -95,7 +95,7 @@ Kafka não torna a transação do banco e a publicação atômicas. Sem uma estr
 2. Linguagem compartilhada: iniciada, com definições confirmadas de inativo e cargo.
 3. Regras e cenários: em discussão; consultar a tabela de propostas.
 4. Contexto e agregados: propostos neste documento, ainda sujeitos à revisão.
-5. Modelo de Employee: criação, inativação no domínio, cadastro persistido e listagem; busca por departamento, inativação pela API e eventos estão pendentes.
+5. Modelo de Employee: criação, inativação no domínio, cadastro persistido, listagem e busca por departamento; inativação pela API e eventos estão pendentes.
 6. Validação do modelo com testes: testes de domínio, aplicação e integração de cadastro com H2 e PostgreSQL; faltam testes dos demais fluxos de colaboradores e eventos.
 
 Para explicar este passo: quais regras estão confirmadas, quais são propostas e por que uma regra pode precisar da entidade, do caso de uso e do banco trabalhando juntos?

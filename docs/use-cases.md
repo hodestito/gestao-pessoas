@@ -10,7 +10,7 @@ Atualizado em 27/10/2026. Complementa o [modelo de domínio](domain.md). Contrat
 | UC-02 | Criar cargo | POST /positions | Implementado, sujeito à revisão do modelo. |
 | UC-03 | Cadastrar colaborador | POST /employees | Implementado sem evento; publicação Kafka pendente. |
 | UC-04 | Listar colaboradores | GET /employees | Implementado; integração aprovada pelo responsável técnico. |
-| UC-05 | Buscar por departamento | GET /employees/search?department=RH | Em especificação. |
+| UC-05 | Buscar por departamento | GET /employees/search?department=RH | Implementado na branch de busca, aguardando revisão. |
 | UC-06 | Inativar colaborador | DELETE /employees/{id} | Em especificação. |
 
 O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo de autenticação/autorização implementado. O enunciado não define papéis de acesso.
@@ -85,11 +85,11 @@ O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo 
 
 **Entrada obrigatória pelo exemplo do enunciado:** nome do departamento no parâmetro department. O exemplo RH não define sozinho se a comparação é parcial, exata ou sensível a caixa.
 
-**Proposta:** correspondência exata sem distinguir maiúsculas/minúsculas, incluindo ativos/inativos e com paginação. Sem correspondências, retornar 200 com coleção vazia. Definir o comportamento de nomes repetidos antes de implementar, pois o cadastro atual permite repetições.
+**Comportamento implementado para revisão:** correspondência exata sem distinguir maiúsculas/minúsculas, incluindo ativos/inativos e com paginação. Espaços nas extremidades são removidos; acentos não são ignorados intencionalmente. Sem correspondências, retornar 200 com coleção vazia. Nomes repetidos identificam todos os departamentos correspondentes, pois o cadastro atual permite repetições.
 
-**Erros propostos:** 400 para parâmetro ausente/vazio ou paginação inválida.
+**Erros:** 400 para parâmetro ausente/vazio ou paginação inválida.
 
-**Cenários a implementar:** encontrar somente colaboradores dos departamentos correspondentes, não incluir outros departamentos, retornar vazio quando não houver correspondência e respeitar a comparação/paginação definidas. A busca não produz evento de negócio.
+**Cenários testados:** encontrar colaboradores dos departamentos correspondentes inclusive homônimos e inativos, não incluir outros departamentos, retornar vazio sem correspondência, respeitar comparação/paginação e tratar entrada com sintaxe de SQL injection como dado. A busca não produz evento de negócio.
 
 ## UC-06 — Inativar colaborador
 

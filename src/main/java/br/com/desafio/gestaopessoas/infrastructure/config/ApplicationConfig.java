@@ -15,4 +15,7 @@ public class ApplicationConfig {
         return new CreateEmployee(employees, departments, positions, clock, UUID::randomUUID);
     }
     @Bean ListEmployees listEmployees(EmployeeRepository employees) { return new ListEmployees(employees); }
+    @Bean SearchEmployeesByDepartment searchEmployeesByDepartment(EmployeeRepository employees) {
+        return new SearchEmployeesByDepartment(employees);
+    }
 }

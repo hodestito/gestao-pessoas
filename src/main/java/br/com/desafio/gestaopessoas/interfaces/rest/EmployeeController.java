@@ -4,6 +4,7 @@ import br.com.desafio.gestaopessoas.domain.employee.Employee;
 import br.com.desafio.gestaopessoas.domain.employee.EmployeeStatus;
 import br.com.desafio.gestaopessoas.application.EmployeeRegistration;
 import br.com.desafio.gestaopessoas.application.ListEmployees;
+import br.com.desafio.gestaopessoas.application.SearchEmployeesByDepartment;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -20,9 +21,12 @@ import org.springframework.web.bind.annotation.*;
 public class EmployeeController {
     private final EmployeeRegistration registration;
     private final ListEmployees listEmployees;
-    public EmployeeController(EmployeeRegistration registration, ListEmployees listEmployees) {
+    private final SearchEmployeesByDepartment searchEmployeesByDepartment;
+    public EmployeeController(EmployeeRegistration registration, ListEmployees listEmployees,
+                              SearchEmployeesByDepartment searchEmployeesByDepartment) {
         this.registration = registration;
         this.listEmployees = listEmployees;
+        this.searchEmployeesByDepartment = searchEmployeesByDepartment;
     }
 
     record EmployeeRequest(@NotBlank @Size(max = 120) String name, @NotBlank String email,
@@ -52,5 +56,12 @@ public class EmployeeController {
                               @RequestParam(defaultValue = "0") int page,
                               @RequestParam(defaultValue = "20") int size) {
         return EmployeePageResponse.from(listEmployees.execute(name, status, page, size));
+    }
+
+    @GetMapping("/employees/search")
+    EmployeePageResponse searchByDepartment(@RequestParam String department,
+                                            @RequestParam(defaultValue = "0") int page,
+                                            @RequestParam(defaultValue = "20") int size) {
+        return EmployeePageResponse.from(searchEmployeesByDepartment.execute(department, page, size));
     }
 }
