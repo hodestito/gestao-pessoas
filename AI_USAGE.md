@@ -15,8 +15,9 @@ Codex/ChatGPT auxiliou na preparação do ambiente e na implementação incremen
 
 - O candidato perguntou se a arquitetura e o DDD haviam sido definidos antes das classes. A revisão identificou que a separação técnica de camadas já existia, mas a modelagem de domínio estava incompleta.
 - O candidato definiu inativo como quem saiu da empresa, equiparou cargo e posição, exigiu departamento existente e e-mail único. A IA organizou essas definições em `docs/domain.md` e `docs/use-cases.md`, preservando como propostas as demais escolhas.
-- O candidato indicou interesse em Outbox sem aumentar a complexidade agora. A IA propôs eventos assíncronos após commit, registrando a janela de perda de eventos. A decisão ainda requer revisão antes da implementação.
-- A pedido do candidato para entender cada passo, adotamos o ciclo entender, decidir, implementar, testar, revisar e versionar. Nesta etapa houve revisão documental e conferência com o código; não foram executados novos testes de aplicação.
+- O candidato indicou interesse em Outbox sem aumentar a complexidade agora. A IA propôs Spring Events; após o candidato questionar a preferência do enunciado por Kafka, comparou as opções. O candidato aprovou Kafka e deixou a decisão sobre Outbox para o incremento de eventos.
+- Para o modelo inicial de Employee, o candidato aprovou comparação de e-mail sem distinção de caixa e com remoção de espaços externos, unicidade inclusive para inativos, exigência de cargo existente e limite de 120 caracteres para nome. A IA implementou o modelo e seus testes unitários; persistência e garantias entre registros permanecem pendentes.
+- A pedido do candidato para entender cada passo, adotamos o ciclo entender, decidir, implementar, testar, revisar e versionar. Na etapa inicial de documentação houve revisão documental e conferência com o código; não foram executados novos testes de aplicação naquela etapa.
 
 ## Decisões e limitações
 

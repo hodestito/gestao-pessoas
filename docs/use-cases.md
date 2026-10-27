@@ -47,7 +47,7 @@ O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo 
 
 **Entrada proposta:** name, email, departmentId e positionId. O sistema gera id e createdAt; ACTIVE como status inicial é uma proposta.
 
-**Regras confirmadas:** departamento deve existir e e-mail deve ser único. Exigir cargo existente é proposta pendente de revisão. A política de comparação de e-mail e o alcance da unicidade em relação a inativos também precisam ser definidos.
+**Regras confirmadas:** departamento e cargo devem existir; e-mail é único mesmo entre inativos, comparado sem diferenciar caixa e com espaços das extremidades removidos; nome tem até 120 caracteres. Criar Employee como ACTIVE foi aprovado para o modelo inicial.
 
 **Fluxo proposto:**
 
@@ -55,7 +55,7 @@ O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo 
 2. Consultar as referências de departamento e cargo.
 3. Verificar disponibilidade do e-mail para antecipar uma resposta compreensível.
 4. Criar Employee e salvar em uma transação protegida por unicidade e chaves estrangeiras no banco.
-5. Produzir EmployeeCreatedEvent. No desenho assíncrono proposto, o consumidor só processa após o commit.
+5. Produzir EmployeeCreatedEvent por Kafka. O mecanismo e suas garantias serão definidos no incremento de eventos.
 6. Retornar 201 com os dados do colaborador criado.
 
 **Erros HTTP propostos:** 400 para valores/identificadores malformados; 422 para referências inexistentes; 409 para e-mail duplicado. Esses códigos são escolhas de contrato, não exigências expressas do enunciado. Uma falha não prevista de infraestrutura deve ser distinguida dos erros de negócio.
@@ -64,11 +64,11 @@ O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo 
 
 - Dados válidos e referências existentes criam um colaborador e produzem o evento exigido.
 - Departamento inexistente impede o cadastro, sem colaborador nem evento de criação confirmado.
-- Cargo inexistente impede o cadastro, se essa proposta for confirmada.
+- Cargo inexistente impede o cadastro.
 - Duas requisições simultâneas com o mesmo e-mail produzem somente um cadastro; a outra recebe conflito.
 - Rollback da gravação impede o consumo de um evento de criação confirmada.
 
-**Limite da garantia:** a resposta de criação não garante que o histórico assíncrono já tenha sido gravado. Sem Outbox, há uma janela de perda de eventos.
+**Limite da garantia:** a resposta de criação não garante que o histórico assíncrono já tenha sido gravado. Sem uma estratégia como Outbox, existe uma janela de perda entre a gravação e a publicação no Kafka.
 
 ## UC-04 — Listar colaboradores
 
@@ -106,7 +106,7 @@ O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo 
 
 O enunciado exige consumidores para EmployeeCreatedEvent e EmployeeStatusChangedEvent, com logs customizados e atualização de employee_events.
 
-**Proposta ainda não implementada:** consumir após commit, em executor assíncrono, e registrar histórico em uma nova transação. Definir identificação do evento, conteúdo mínimo, proteção contra duplicatas, observação de falhas e tempo de espera dos testes. Logs devem evitar expor dados pessoais desnecessários.
+**Decisão:** usar Kafka; publicação e consumo ainda não implementados. Definir transações, identificação do evento, conteúdo mínimo, proteção contra duplicatas, observação de falhas e tempo de espera dos testes no incremento de eventos. Logs devem evitar expor dados pessoais desnecessários.
 
 **Critérios:** testar publicação e consumo, verificar o histórico após processamento e usar espera limitada nos testes. Documentar o comportamento em falhas e a janela de perda sem Outbox. Não afirmar sucesso de consumo apenas porque a API respondeu 201 ou 204.
 

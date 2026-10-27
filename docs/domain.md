@@ -37,13 +37,14 @@ Transferência, reativação, recontratação, edição de cadastro, exclusão d
 | Regra | Origem | Onde deverá ser garantida |
 |---|---|---|
 | Não cadastrar colaborador em departamento inexistente. | Candidato | Caso de uso verifica existência; banco protege a referência. |
-| E-mail de colaborador deve ser único. | Candidato | Caso de uso pode antecipar o erro; restrição no banco garante a regra sob concorrência. |
+| Não cadastrar colaborador em cargo inexistente. | Candidato | Caso de uso verifica existência; banco protege a referência. |
+| E-mail de colaborador deve ser único, inclusive para inativos. | Candidato | Caso de uso pode antecipar o erro; restrição no banco garante a regra sob concorrência. |
 | Inativação representa saída da empresa. | Candidato | Comportamento do agregado Employee. |
 | Criar colaborador produz EmployeeCreatedEvent. | Enunciado | Fluxo de cadastro e publicação de eventos. |
 | Inativar colaborador produz EmployeeStatusChangedEvent. | Enunciado | Mudança de estado e publicação de eventos. |
 | Consumidores geram logs e atualizam uma tabela de histórico. | Enunciado | Consumidores de eventos e persistência do histórico. |
 
-As garantias acima para colaboradores ainda não estão implementadas.
+As verificações de existência e unicidade, os eventos e o histórico ainda não estão implementados. A transição de ACTIVE para INACTIVE foi implementada no domínio.
 
 ## Agregados e invariantes: proposta de modelagem
 
@@ -55,7 +56,7 @@ Uma **invariante** é uma regra que precisa continuar verdadeira após uma opera
 | Department | Proteger os dados do departamento. | Não contém uma coleção de todos os colaboradores. |
 | Position | Proteger os dados do cargo. | Não contém uma coleção de todos os colaboradores. |
 
-Employee ainda será modelado. Department e Position já existem como registros imutáveis com validações de construção; isso, isoladamente, não demonstra todo o DDD exigido pelo desafio.
+Employee foi iniciado como classe com identidade pelo id, criação ACTIVE e comportamento de inativação. Department e Position já existem como registros imutáveis com validações de construção; isso, isoladamente, não demonstra todo o DDD exigido pelo desafio.
 
 ### Quem protege cada tipo de regra
 
@@ -67,7 +68,7 @@ Por exemplo, consultar um e-mail antes de gravar não resolve a concorrência: d
 
 ### Objetos de valor e serviços de domínio
 
-CostCenterCode já existe como objeto de valor. Email é uma proposta para concentrar validação e uma política explícita de comparação. Precisamos definir essa política antes de implementá-la.
+CostCenterCode e Email são objetos de valor. Email remove espaços nas extremidades e converte para minúsculas com `Locale.ROOT`, para a comparação aprovada pelo candidato. O formato implementado é uma política simples com limite técnico de 254 caracteres; não cobre todos os endereços possíveis nas RFCs nem comprova que o endereço exista. A unicidade entre colaboradores ainda depende de persistência e constraint no banco.
 
 O enunciado exige serviços de domínio. Ainda precisamos identificar e justificar qual regra de negócio, independente de frameworks, deve ser expressa por esse serviço. Os casos de uso existentes são serviços de aplicação; não devem ser apresentados como serviços de domínio apenas para cumprir a nomenclatura.
 
@@ -75,26 +76,18 @@ O enunciado exige serviços de domínio. Ainda precisamos identificar e justific
 
 | Tema | Proposta inicial | Questão ainda aberta |
 |---|---|---|
-| E-mail de inativos | Manter unicidade entre ativos e inativos. | Como tratar recontratação ou reutilização do endereço? |
-| Comparação do e-mail | Definir normalização antes de persistir. | Quais diferenças de caixa ou espaços representam o mesmo endereço? |
-| Cargo existente | Exigir Position existente para cadastrar Employee. | Confirmar como regra de negócio. |
-| Estado inicial | Criar colaborador como ACTIVE. | Confirmar se o cadastro sempre representa pessoa já ativa. |
 | DELETE | Inativar e preservar o registro. | Confirmar resposta e tratamento da repetição. |
-| Inativação repetida | Retornar sucesso sem gerar novo evento. | Confirmar contrato idempotente. |
+| Inativação repetida | O domínio retorna false quando não há mudança. | Confirmar a resposta HTTP e ausência de evento repetido no fluxo completo. |
 | Listagem | Incluir ativos/inativos e paginar. | Confirmar tamanho, ordenação e limites. |
 | Busca | Nome exato do departamento, sem distinguir caixa, com paginação. | Definir comportamento para nomes repetidos e departamento inexistente. |
 
-Limites de tamanho de nome, centro de custo, título e nível presentes no código são decisões técnicas iniciais; ainda não são regras de negócio confirmadas. Nível do cargo está como texto, sem lista fechada, e o código não exige unicidade de nome de departamento ou centro de custo.
+O limite de 120 caracteres para o nome de Employee foi aprovado pelo candidato. Limites de nome de departamento, centro de custo, título e nível são decisões técnicas iniciais, ainda não confirmadas como regras de negócio. Nível do cargo está como texto, sem lista fechada, e o código não exige unicidade de nome de departamento ou centro de custo.
 
 ## Transações e eventos
 
-O candidato indicou interesse em Outbox e pediu para evitar aumentar a complexidade neste momento. A proposta apresentada foi começar com Spring Events e consumo assíncrono após o commit. Essa estratégia ainda precisa de revisão antes da implementação.
+O candidato aprovou Kafka como transporte, preferido no enunciado. A escolha entre usar Outbox desde o início ou aceitar uma janela de perda será discutida no incremento de eventos; nenhum mecanismo está implementado.
 
-Nesse desenho, a gravação do colaborador ocorre na transação principal. Somente após o commit, o consumidor processa o evento e grava o histórico em outra transação. Uma falha do consumidor não desfaz o cadastro já confirmado.
-
-**Limitação:** pode haver perda do evento entre o commit e o processamento, inclusive numa queda da aplicação. O histórico pode ficar incompleto. Retentativas em memória não oferecem a durabilidade de uma Outbox. Não prometer entrega garantida nem exactly-once.
-
-A Outbox seria uma evolução para gravar a intenção de publicação na mesma transação do colaborador e permitir retomada. Publicação via interface ajuda a reduzir acoplamento, mas não cria essa garantia automaticamente.
+Kafka não torna a transação do banco e a publicação atômicas. Sem uma estratégia adicional, a aplicação pode confirmar o cadastro e falhar antes de publicar o evento. A Outbox permite registrar a intenção de publicação na mesma transação do colaborador, com mecanismo posterior de envio; também exige cuidados com duplicatas e operação. Não prometer exactly-once.
 
 ## Situação do trabalho de DDD
 
@@ -102,7 +95,7 @@ A Outbox seria uma evolução para gravar a intenção de publicação na mesma 
 2. Linguagem compartilhada: iniciada, com definições confirmadas de inativo e cargo.
 3. Regras e cenários: em discussão; consultar a tabela de propostas.
 4. Contexto e agregados: propostos neste documento, ainda sujeitos à revisão.
-5. Modelo de colaboradores e limites transacionais: ainda não implementados.
-6. Validação do modelo com testes: iniciada apenas para departamentos e cargos.
+5. Modelo de Employee: criação e inativação iniciadas; persistência, referências existentes, unicidade e limites transacionais ainda pendentes.
+6. Validação do modelo com testes: testes de domínio para departamentos, cargos e Employee; falta testar os fluxos completos de colaboradores.
 
 Para explicar este passo: quais regras estão confirmadas, quais são propostas e por que uma regra pode precisar da entidade, do caso de uso e do banco trabalhando juntos?

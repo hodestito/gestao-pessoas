@@ -2,13 +2,16 @@
 
 Projeto em construção para o desafio técnico. Os primeiros fluxos implementados são a criação de departamentos e cargos; os fluxos de colaboradores e eventos ainda estão pendentes.
 
+O modelo de domínio de Employee já contempla criação ativa, e-mail normalizado e inativação; ainda não há endpoint, persistência de colaboradores nem eventos.
+
 ## Documentação e evolução
 
 - [Domínio](docs/domain.md): linguagem compartilhada, regras confirmadas, propostas e situação da modelagem DDD.
 - [Casos de uso](docs/use-cases.md): os seis fluxos, contratos existentes/propostos e cenários de aceitação.
+- [Decisão 001](docs/decisions/001-employee-e-kafka.md): identidade de Employee, regras aprovadas e direção para Kafka.
 - [Uso de IA](AI_USAGE.md): participação da IA e padrão dos commits identificados com `[IA]`.
 
-Os documentos distinguem requisitos do enunciado, definições do candidato, propostas e comportamento implementado. O Git registra a evolução real; os documentos apresentam o entendimento atual. A arquitetura detalhada e os registros individuais de decisão serão acrescentados conforme discutirmos essas decisões.
+Os documentos distinguem requisitos do enunciado, definições do candidato, propostas e comportamento implementado. O Git registra a evolução real; os documentos apresentam o entendimento atual. A arquitetura detalhada e outros registros de decisão serão acrescentados conforme discutirmos essas decisões.
 
 ## Base escolhida
 
