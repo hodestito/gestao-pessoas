@@ -10,4 +10,5 @@ public interface EmployeeRepository {
     boolean existsByEmail(Email email);
     Employee save(Employee employee);
     Page<Employee> findAll(String name, EmployeeStatus status, Pageable pageable);
+    Page<Employee> findByDepartmentName(String department, Pageable pageable);
 }

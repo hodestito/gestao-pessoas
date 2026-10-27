@@ -17,6 +17,10 @@ public class EmployeePersistenceAdapter implements EmployeeRepository {
     public boolean existsByEmail(Email email) { return repository.existsByEmail(email.value()); }
     public Employee save(Employee employee) { return repository.saveAndFlush(new EmployeeEntity(employee)).toDomain(); }
 
+    public Page<Employee> findByDepartmentName(String department, Pageable pageable) {
+        return repository.searchByDepartment(department, pageable).map(EmployeeEntity::toDomain);
+    }
+
     public Page<Employee> findAll(String name, EmployeeStatus status, Pageable pageable) {
         Specification<EmployeeEntity> filters = (root, query, builder) -> {
             var predicate = builder.conjunction();

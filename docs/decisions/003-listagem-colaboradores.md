@@ -1,6 +1,6 @@
 # 003 — Listagem paginada de colaboradores
 
-Estado: aprovado para integração pelo responsável técnico. Data: 27/10/2026.
+Estado: integrado na main pelo PR #1 após aprovação do responsável técnico. Data: 27/10/2026.
 
 ## Contexto e decisões
 
