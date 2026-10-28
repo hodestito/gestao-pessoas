@@ -78,6 +78,13 @@ class EmployeeListApiIntegrationTest {
         var page1 = get("?name=" + encode(marker) + "&page=1&size=2");
         assertTrue(page1.body().contains(third.toString()));
         assertFalse(page1.body().contains(first.toString()));
+        assertTrue(page1.body().contains("\"page\":1"));
+        var beyond = get("?name=" + encode(marker) + "&page=9&size=2");
+        assertEquals(200, beyond.statusCode());
+        assertTrue(beyond.body().contains("\"content\":[]"));
+        assertTrue(beyond.body().contains("\"page\":9"));
+        assertTrue(beyond.body().contains("\"totalElements\":3"));
+        assertTrue(beyond.body().contains("\"totalPages\":2"));
     }
 
     @Test void filtersNameIgnoringCaseAndCombinesStatus() throws Exception {

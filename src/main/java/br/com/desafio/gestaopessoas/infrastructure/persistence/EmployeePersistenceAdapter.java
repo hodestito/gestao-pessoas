@@ -1,6 +1,8 @@
 package br.com.desafio.gestaopessoas.infrastructure.persistence;
 
 import br.com.desafio.gestaopessoas.application.EmployeeRepository;
+import br.com.desafio.gestaopessoas.application.EmployeePagination;
+import br.com.desafio.gestaopessoas.application.PageResult;
 import br.com.desafio.gestaopessoas.application.VersionedEmployee;
 import br.com.desafio.gestaopessoas.domain.employee.Employee;
 import br.com.desafio.gestaopessoas.domain.employee.EmployeeStatus;
@@ -8,7 +10,8 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
@@ -26,11 +29,11 @@ public class EmployeePersistenceAdapter implements EmployeeRepository {
         repository.saveAndFlush(new EmployeeEntity(snapshot.employee(), snapshot.version()));
     }
 
-    public Page<Employee> findByDepartmentName(String department, Pageable pageable) {
-        return repository.searchByDepartment(department, pageable).map(EmployeeEntity::toDomain);
+    public PageResult<Employee> findByDepartmentName(String department, EmployeePagination pagination) {
+        return toResult(repository.searchByDepartment(department, toPageRequest(pagination)));
     }
 
-    public Page<Employee> findAll(String name, EmployeeStatus status, Pageable pageable) {
+    public PageResult<Employee> findAll(String name, EmployeeStatus status, EmployeePagination pagination) {
         Specification<EmployeeEntity> filters = (root, query, builder) -> {
             var predicate = builder.conjunction();
             if (name != null) {
@@ -40,6 +43,16 @@ public class EmployeePersistenceAdapter implements EmployeeRepository {
             if (status != null) predicate = builder.and(predicate, builder.equal(root.get("status"), status));
             return predicate;
         };
-        return repository.findAll(filters, pageable).map(EmployeeEntity::toDomain);
+        return toResult(repository.findAll(filters, toPageRequest(pagination)));
+    }
+
+    private PageRequest toPageRequest(EmployeePagination pagination) {
+        return PageRequest.of(pagination.page(), pagination.size(),
+                Sort.by("createdAt").ascending().and(Sort.by("id").ascending()));
+    }
+
+    private PageResult<Employee> toResult(Page<EmployeeEntity> page) {
+        return new PageResult<>(page.getContent().stream().map(EmployeeEntity::toDomain).toList(),
+                page.getNumber(), page.getSize(), page.getTotalElements());
     }
 }

@@ -91,6 +91,13 @@ class EmployeeDepartmentSearchIntegrationTest {
         assertEquals(200, missing.statusCode());
         assertTrue(missing.body().contains("\"content\":[]"));
         assertTrue(missing.body().contains("\"totalElements\":0"));
+        assertTrue(missing.body().contains("\"totalPages\":0"));
+        var beyond = get(query + "&page=9");
+        assertEquals(200, beyond.statusCode());
+        assertTrue(beyond.body().contains("\"content\":[]"));
+        assertTrue(beyond.body().contains("\"page\":9"));
+        assertTrue(beyond.body().contains("\"totalElements\":2"));
+        assertTrue(beyond.body().contains("\"totalPages\":2"));
     }
 
     @Test void rejectsMissingBlankAndInvalidPagination() throws Exception {
