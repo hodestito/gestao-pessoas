@@ -12,15 +12,23 @@ import org.springframework.stereotype.Component;
 public class KafkaOutboxDelivery {
     private final KafkaTemplate<String, String> kafka;
     private final String topic;
+    private final String statusTopic;
 
     public KafkaOutboxDelivery(KafkaTemplate<String, String> kafka,
-                               @Value("${app.messaging.topic}") String topic) {
+                               @Value("${app.messaging.topic}") String topic,
+                               @Value("${app.messaging.status-topic}") String statusTopic) {
         this.kafka = kafka;
         this.topic = topic;
+        this.statusTopic = statusTopic;
     }
 
-    public void send(UUID employeeId, String payload) throws Exception {
+    public void send(String eventType, UUID employeeId, String payload) throws Exception {
+        String destination = switch (eventType) {
+            case EmployeeCreatedMessage.TYPE -> topic;
+            case EmployeeStatusChangedMessage.TYPE -> statusTopic;
+            default -> throw new IllegalArgumentException("Unsupported outbox event type");
+        };
         // A marcação na Outbox só acontece após confirmação do broker.
-        kafka.send(topic, employeeId.toString(), payload).get(15, TimeUnit.SECONDS);
+        kafka.send(destination, employeeId.toString(), payload).get(15, TimeUnit.SECONDS);
     }
 }

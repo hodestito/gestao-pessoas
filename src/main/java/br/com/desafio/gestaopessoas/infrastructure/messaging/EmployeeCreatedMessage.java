@@ -6,7 +6,7 @@ import java.util.UUID;
 
 /** Contrato JSON explícito; não usa nomes de classes Java como tipo Kafka. */
 public record EmployeeCreatedMessage(int schemaVersion, String eventType, UUID eventId,
-                                     UUID employeeId, Instant occurredAt) {
+                                     UUID employeeId, Instant occurredAt) implements EmployeeEventMessage {
     public static final String TYPE = "EmployeeCreatedEvent";
     public EmployeeCreatedMessage {
         if (schemaVersion != 1 || !TYPE.equals(eventType)) {

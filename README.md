@@ -1,8 +1,8 @@
 # Gestão de pessoas — desafio técnico
 
-Projeto em construção para o desafio técnico. Estão implementados os seis endpoints. O cadastro registra EmployeeCreatedEvent em Outbox, com publicação Kafka e consumidor de histórico. O evento de inativação ainda está pendente.
+Projeto em construção para o desafio técnico. Estão implementados os seis endpoints e os eventos de criação e inativação, com Outbox JPA, publicação Kafka e consumidores de histórico. O incremento de inativação está nesta branch para revisão.
 
-Employee contempla criação ativa, e-mail normalizado e inativação no domínio. O cadastro persiste empregado e evento na mesma transação. A inativação preserva o registro e usa controle otimista de versão.
+Employee contempla criação ativa, e-mail normalizado e inativação no domínio. Cadastro e inativação persistem empregado e seu evento na mesma transação. A inativação preserva o registro, usa controle otimista de versão e só registra evento se houver mudança efetiva.
 
 ## Documentação e evolução
 
@@ -14,6 +14,7 @@ Employee contempla criação ativa, e-mail normalizado e inativação no domíni
 - [Decisão 004](docs/decisions/004-busca-por-departamento.md): busca por departamento e critérios adotados para revisão.
 - [Decisão 005](docs/decisions/005-inativacao-version.md): inativação, concorrência e transações.
 - [Decisão 006](docs/decisions/006-outbox-cadastro.md): Outbox, publicação Kafka, idempotência, limites e arquivos envolvidos.
+- [Decisão 007](docs/decisions/007-evento-inativacao.md): evento de inativação, dois tópicos e histórico compartilhado.
 - [Uso de IA](AI_USAGE.md): participação da IA e padrão dos commits identificados com `[IA]`.
 
 Os documentos distinguem requisitos do enunciado, definições do candidato, propostas e comportamento implementado. O Git registra a evolução real; os documentos apresentam o entendimento atual. A arquitetura detalhada e outros registros de decisão serão acrescentados conforme discutirmos essas decisões.
@@ -45,7 +46,7 @@ A listagem aceita filtros opcionais `name` e `status`, páginas iniciadas em zer
 
 A busca por departamento usa correspondência exata sem diferenciar maiúsculas/minúsculas, inclui ativos e inativos e retorna colaboradores de todos os departamentos com o mesmo nome. Department ausente ou vazio resulta em 400; nenhum resultado retorna 200 com conteúdo vazio.
 
-A inativação retorna 204 quando realizada ou quando o colaborador já estava inativo; ID inexistente retorna 404. Um segundo conflito de versão após uma nova tentativa retorna 409. Substitua o identificador pelo UUID do colaborador. A operação ainda não emite o evento obrigatório.
+A inativação retorna 204 quando realizada ou quando o colaborador já estava inativo; ID inexistente retorna 404. Um segundo conflito de versão após uma nova tentativa retorna 409. Substitua o identificador pelo UUID do colaborador. Somente a transição efetiva registra EmployeeStatusChangedEvent, com previousStatus=ACTIVE e newStatus=INACTIVE. A resposta 204 não espera a publicação nem o histórico.
 
 ## Primeira verificação
 
@@ -68,7 +69,7 @@ Com o Docker Desktop em execução, use `docker compose up -d postgres` nesta pa
 
 Para iniciar a aplicação usando esse banco: `./mvnw spring-boot:run -Dspring-boot.run.profiles=postgres`. Sem esse perfil, a base inicial usa H2 em memória. Para parar o banco sem apagar os dados, use `docker compose stop`.
 
-## Eventos de cadastro com Outbox e Kafka
+## Eventos com Outbox e Kafka
 
 Inicie os serviços e a aplicação:
 
@@ -77,11 +78,13 @@ docker compose up -d --wait postgres kafka
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=postgres,kafka
 ```
 
-O Compose usa Kafka 4.1.0 em KRaft, com um broker e volume persistente. A aplicação no Mac conecta em localhost:9092; uma aplicação na rede do Compose usaria kafka:19092, via KAFKA_BOOTSTRAP_SERVERS. O tópico employee-created.v1 tem uma partição e uma réplica, adequado ao ambiente local.
+O Compose usa Kafka 4.1.0 em KRaft, com um broker e volume persistente. A aplicação no Mac conecta em localhost:9092; uma aplicação na rede do Compose usaria kafka:19092, via KAFKA_BOOTSTRAP_SERVERS. Os tópicos employee-created.v1 e employee-status-changed.v1 possuem uma partição e uma réplica cada, para o ambiente local. As propriedades app.messaging.topic e app.messaging.status-topic permitem configurar os nomes; o responsável técnico escolheu dois tópicos preservando o contrato existente.
 
-O cadastro grava empregado e evento na mesma transação PostgreSQL. A cada segundo, um publicador seleciona até 20 pendentes, envia cada um com employeeId como chave e aguarda confirmação do Kafka antes de marcar published_at. Falhas aguardam cinco segundos antes de nova tentativa. eventId permanece igual nos reenvios.
+Cadastro e inativação gravam mudança e evento na mesma transação PostgreSQL. Uma falha na Outbox desfaz também a mudança de estado e o incremento de versão. A cada segundo, um publicador seleciona até 20 pendentes, escolhe o tópico por event_type, envia com employeeId como chave e aguarda confirmação do Kafka antes de marcar published_at. Falhas aguardam cinco segundos antes de nova tentativa. eventId permanece igual nos reenvios.
 
-O consumidor employee-history.v1 grava employee_events e produz logs com identificadores, sem nome/e-mail. A chave primária event_id impede duplicatas. O offset é confirmado após processamento; falhas são repetidas. Isso oferece entrega pelo menos uma vez com histórico idempotente, sob disponibilidade e retenção dos dados; não oferece exactly-once entre banco e Kafka.
+Os consumidores dos dois tópicos usam o grupo employee-history.v1, compartilham a gravação em employee_events e produzem logs com tipo e identificadores, sem nome/e-mail. A chave primária event_id impede duplicatas. O offset é confirmado após processamento; falhas são repetidas. Isso oferece entrega pelo menos uma vez com histórico idempotente, sob disponibilidade e retenção dos dados; não oferece exactly-once entre banco e Kafka.
+
+Não há garantia de ordem entre os tópicos, nem entre eventos sujeitos a retry no publicador. O histórico aceita inativação antes da criação e apenas acrescenta registros; ele não reaplica eventos para modificar Employee. O payload de inativação registra os estados anterior/novo e o instante da mudança, não a data de criação do empregado.
 
 Sem o perfil kafka, os eventos continuam na Outbox, sem publicação. H2 em memória é o padrão e perde empregado e Outbox ao encerrar o processo; use PostgreSQL para durabilidade. Cadastros anteriores à V4 não recebem eventos retroativos.
 
@@ -94,7 +97,7 @@ SELECT event_id, employee_id, event_type, occurred_at, processed_at
 FROM employee_events ORDER BY processed_at;
 ```
 
-O desenho mantém uma conexão e um bloqueio de linha durante cada envio, com espera limitada; prioriza simplicidade e baixo volume. O publicador foi validado com uma instância. Não há garantia de ordenação entre eventos, limpeza automática de registros ou DLQ. Uma mensagem inválida bloqueia sua partição até intervenção; os limites e alternativas estão na decisão 006. O evento EmployeeStatusChangedEvent será tratado no próximo incremento.
+O desenho mantém uma conexão e um bloqueio de linha durante cada envio, com espera limitada; prioriza simplicidade e baixo volume. O publicador foi validado com uma instância. Não há garantia de ordenação entre eventos, limpeza automática de registros ou DLQ. Uma mensagem inválida bloqueia sua partição até intervenção; os limites e alternativas estão nas decisões 006 e 007. Não há emissão retroativa de eventos de operações anteriores à implementação.
 
 ## Testes de Outbox e Kafka
 
@@ -115,11 +118,11 @@ docker compose exec -T postgres createdb -U gestao gestao_pessoas_test
   -Dspring.datasource.username=gestao -Dspring.datasource.password=gestao_local
 ```
 
-O teste Kafka cria e remove seu próprio tópico e grupo. O agendamento é desabilitado nos testes controlados de falhas; o publicador é chamado explicitamente e o consumidor é real. Não use uma base de produção ou com outros publicadores ativos. Testcontainers permanece adiado por decisão do responsável técnico.
+O teste Kafka cria e remove seus próprios tópicos e grupo. Verifica criação, inativação repetida, consumo em ordem inversa, falhas transitórias e duplicatas com confirmação de offset. O agendamento é desabilitado nos testes controlados de falhas; o publicador é chamado explicitamente e os consumidores são reais. Não use uma base de produção ou com outros publicadores ativos. Testcontainers permanece adiado por decisão do responsável técnico.
 
 ## Próximos incrementos
 
-1. Estender Outbox e histórico para o evento de inativação, preservando idempotência e controle de versão.
+1. Revisar e integrar o evento de inativação após aprovação do responsável técnico.
 2. Revisar regras de domínio e casos de uso com o responsável técnico.
 3. Revisar operação da mensageria, retenção e tratamento de mensagens inválidas conforme o escopo.
 4. Acrescentar testes de integração, Docker, documentação da API e registro do uso de IA.

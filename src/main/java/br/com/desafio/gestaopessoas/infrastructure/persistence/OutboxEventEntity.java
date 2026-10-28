@@ -1,6 +1,6 @@
 package br.com.desafio.gestaopessoas.infrastructure.persistence;
 
-import br.com.desafio.gestaopessoas.infrastructure.messaging.EmployeeCreatedMessage;
+import br.com.desafio.gestaopessoas.infrastructure.messaging.EmployeeEventMessage;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
@@ -23,7 +23,7 @@ public class OutboxEventEntity implements Persistable<UUID> {
 
     protected OutboxEventEntity() {}
 
-    public OutboxEventEntity(EmployeeCreatedMessage event, String payload) {
+    public OutboxEventEntity(EmployeeEventMessage event, String payload) {
         eventId = event.eventId();
         employeeId = event.employeeId();
         eventType = event.eventType();
@@ -38,6 +38,7 @@ public class OutboxEventEntity implements Persistable<UUID> {
     @PostPersist @PostLoad private void markPersisted() { newEntity = false; }
 
     public UUID employeeId() { return employeeId; }
+    public String eventType() { return eventType; }
     public String payload() { return payload; }
 
     public void markPublished(Instant now) {

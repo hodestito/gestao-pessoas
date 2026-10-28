@@ -18,7 +18,7 @@ class EmployeeCreatedKafkaConsumerTest {
         String payload = json.writeValueAsString(event);
         var failure = new DataIntegrityViolationException("not a duplicate");
         doThrow(failure).when(history).record(event, payload);
-        var consumer = new EmployeeCreatedKafkaConsumer(json, history);
+        var consumer = new EmployeeCreatedKafkaConsumer(json, new EmployeeEventHistoryHandler(history));
         assertSame(failure, assertThrows(DataIntegrityViolationException.class,
                 () -> consumer.consume(new ConsumerRecord<>("test", 0, 0, event.employeeId().toString(), payload))));
         verify(history).contains(event.eventId());

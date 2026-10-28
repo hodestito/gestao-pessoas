@@ -38,18 +38,18 @@ class OutboxPublishingIntegrationTest {
     @AfterEach void cleanup() { jdbc.update("delete from outbox_events where event_id=?", eventId); }
 
     @Test void failureKeepsEventPendingAndSuccessfulRetryMarksSameEvent() throws Exception {
-        doThrow(new TimeoutException("broker unavailable")).doNothing().when(delivery).send(employeeId, "{}");
+        doThrow(new TimeoutException("broker unavailable")).doNothing().when(delivery).send(EmployeeCreatedMessage.TYPE, employeeId, "{}");
         assertFalse(publisher.publish(eventId));
         assertNull(jdbc.queryForObject("select published_at from outbox_events where event_id=?", OffsetDateTime.class, eventId));
         assertEquals(1, jdbc.queryForObject("select attempts from outbox_events where event_id=?", Integer.class, eventId));
         assertFalse(publisher.publish(eventId), "Deve respeitar o intervalo entre tentativas");
-        verify(delivery, times(1)).send(employeeId, "{}");
+        verify(delivery, times(1)).send(EmployeeCreatedMessage.TYPE, employeeId, "{}");
         jdbc.update("update outbox_events set available_at=? where event_id=?", OffsetDateTime.now(ZoneOffset.UTC).minusSeconds(1), eventId);
         assertTrue(publisher.publish(eventId));
         assertNotNull(jdbc.queryForObject("select published_at from outbox_events where event_id=?", OffsetDateTime.class, eventId));
         assertEquals(2, jdbc.queryForObject("select attempts from outbox_events where event_id=?", Integer.class, eventId));
         assertFalse(publisher.publish(eventId), "Evento publicado não deve ser reenviado pelo polling normal");
-        verify(delivery, times(2)).send(employeeId, "{}");
+        verify(delivery, times(2)).send(EmployeeCreatedMessage.TYPE, employeeId, "{}");
     }
 
     @Test void restartAfterSendBeforeDatabaseCommitCanResendSameEvent() throws Exception {
@@ -59,7 +59,7 @@ class OutboxPublishingIntegrationTest {
         assertNull(jdbc.queryForObject("select published_at from outbox_events where event_id=?", OffsetDateTime.class, eventId));
         reset(repository);
         assertTrue(publisher.publish(eventId));
-        verify(delivery, times(2)).send(employeeId, "{}");
+        verify(delivery, times(2)).send(EmployeeCreatedMessage.TYPE, employeeId, "{}");
         assertEquals(eventId, jdbc.queryForObject("select event_id from outbox_events where event_id=?", UUID.class, eventId));
     }
 
@@ -70,7 +70,7 @@ class OutboxPublishingIntegrationTest {
             sending.countDown();
             if (!release.await(5, java.util.concurrent.TimeUnit.SECONDS)) throw new TimeoutException("test coordination");
             return null;
-        }).when(delivery).send(employeeId, "{}");
+        }).when(delivery).send(EmployeeCreatedMessage.TYPE, employeeId, "{}");
         try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
             var first = executor.submit(() -> publisher.publish(eventId));
             try {
@@ -80,7 +80,7 @@ class OutboxPublishingIntegrationTest {
                 release.countDown();
                 assertTrue(first.get(5, java.util.concurrent.TimeUnit.SECONDS));
                 assertFalse(second.get(5, java.util.concurrent.TimeUnit.SECONDS));
-                verify(delivery, times(1)).send(employeeId, "{}");
+                verify(delivery, times(1)).send(EmployeeCreatedMessage.TYPE, employeeId, "{}");
             } finally {
                 release.countDown();
             }

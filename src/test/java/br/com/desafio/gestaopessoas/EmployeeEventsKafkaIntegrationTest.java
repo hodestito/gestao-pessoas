@@ -28,12 +28,14 @@ import static org.mockito.Mockito.*;
 @ActiveProfiles("kafka")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = "app.outbox.scheduling-enabled=false")
-class EmployeeCreatedKafkaIntegrationTest {
+class EmployeeEventsKafkaIntegrationTest {
     private static final String TOPIC = "employee-created-test-" + UUID.randomUUID();
+    private static final String STATUS_TOPIC = "employee-status-test-" + UUID.randomUUID();
     private static final String GROUP = "employee-history-test-" + UUID.randomUUID();
 
     @DynamicPropertySource static void kafkaProperties(DynamicPropertyRegistry registry) {
         registry.add("app.messaging.topic", () -> TOPIC);
+        registry.add("app.messaging.status-topic", () -> STATUS_TOPIC);
         registry.add("app.messaging.group-id", () -> GROUP);
     }
 
@@ -64,20 +66,13 @@ class EmployeeCreatedKafkaIntegrationTest {
                                         @Autowired org.springframework.kafka.config.KafkaListenerEndpointRegistry listeners) throws Exception {
         listeners.stop();
         try (var admin = AdminClient.create(kafkaAdmin.getConfigurationProperties())) {
-            admin.deleteTopics(List.of(TOPIC)).all().get(10, TimeUnit.SECONDS);
+            admin.deleteTopics(List.of(TOPIC, STATUS_TOPIC)).all().get(10, TimeUnit.SECONDS);
             admin.deleteConsumerGroups(List.of(GROUP)).all().get(10, TimeUnit.SECONDS);
         }
     }
 
     @Test void httpRegistrationPublishesConsumesRetriesAndDeduplicatesWithRealKafka() throws Exception {
-        String body = """
-                {"name":"Teste Kafka","email":"kafka-%s@example.com","departmentId":"%s","positionId":"%s"}
-                """.formatted(UUID.randomUUID(), department, position);
-        var response = HttpClient.newHttpClient().send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/employees"))
-                .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body)).build(),
-                HttpResponse.BodyHandlers.ofString());
-        assertEquals(201, response.statusCode(), response.body());
-        UUID employeeId = UUID.fromString(json.readTree(response.body()).get("id").asText());
+        UUID employeeId = createEmployee();
         var row = jdbc.queryForMap("select event_id,payload,published_at from outbox_events where employee_id=?", employeeId);
         UUID eventId = UUID.fromString(row.get("event_id").toString());
         String payload = (String) row.get("payload");
@@ -91,14 +86,61 @@ class EmployeeCreatedKafkaIntegrationTest {
         await(() -> countHistory(eventId) == 1);
         verify(history, atLeast(2)).record(any(EmployeeCreatedMessage.class), eq(payload));
         assertNotNull(jdbc.queryForObject("select published_at from outbox_events where event_id=?", java.time.OffsetDateTime.class, eventId));
+        assertDuplicateIsAcknowledgedWithoutAnotherHistory(TOPIC, employeeId, eventId, payload);
+    }
 
+    @Test void httpDeactivationConsumesBeforeCreationRetriesAndDeduplicatesOnItsOwnTopic() throws Exception {
+        UUID employeeId = createEmployee();
+        UUID createdId = jdbc.queryForObject("select event_id from outbox_events where employee_id=?", UUID.class, employeeId);
+        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/employees/" + employeeId)).DELETE().build();
+        assertEquals(204, HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString()).statusCode());
+        assertEquals(204, HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString()).statusCode());
+        assertEquals(1, jdbc.queryForObject("""
+                select count(*) from outbox_events where employee_id=? and event_type='EmployeeStatusChangedEvent'
+                """, Integer.class, employeeId));
+        var row = jdbc.queryForMap("""
+                select event_id,payload from outbox_events where employee_id=? and event_type='EmployeeStatusChangedEvent'
+                """, employeeId);
+        UUID statusId = UUID.fromString(row.get("event_id").toString());
+        String payload = (String) row.get("payload");
+        var event = json.readValue(payload, EmployeeStatusChangedMessage.class);
+        assertEquals(br.com.desafio.gestaopessoas.domain.employee.EmployeeStatus.ACTIVE, event.previousStatus());
+        assertEquals(br.com.desafio.gestaopessoas.domain.employee.EmployeeStatus.INACTIVE, event.newStatus());
+        doThrow(new DataAccessResourceFailureException("transient status failure")).doCallRealMethod()
+                .when(history).record(any(EmployeeStatusChangedMessage.class), eq(payload));
+
+        // Não há ordem entre tópicos: processa status antes de publicar criação.
+        assertTrue(publisher.publish(statusId));
+        await(() -> countHistory(statusId) == 1);
+        verify(history, atLeast(2)).record(any(EmployeeStatusChangedMessage.class), eq(payload));
+        assertEquals(0, countHistory(createdId));
+        assertDuplicateIsAcknowledgedWithoutAnotherHistory(STATUS_TOPIC, employeeId, statusId, payload);
+        assertTrue(publisher.publish(createdId));
+        await(() -> countHistory(createdId) == 1);
+        assertEquals(2, jdbc.queryForObject("select count(*) from employee_events where employee_id=?", Integer.class, employeeId));
+        assertEquals("INACTIVE", jdbc.queryForObject("select status from employees where id=?", String.class, employeeId));
+        assertEquals(1L, jdbc.queryForObject("select version from employees where id=?", Long.class, employeeId));
+    }
+
+    private UUID createEmployee() throws Exception {
+        String body = """
+                {"name":"Teste Kafka","email":"kafka-%s@example.com","departmentId":"%s","positionId":"%s"}
+                """.formatted(UUID.randomUUID(), department, position);
+        var response = HttpClient.newHttpClient().send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/employees"))
+                .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body)).build(),
+                HttpResponse.BodyHandlers.ofString());
+        assertEquals(201, response.statusCode(), response.body());
+        return UUID.fromString(json.readTree(response.body()).get("id").asText());
+    }
+
+    private void assertDuplicateIsAcknowledgedWithoutAnotherHistory(String topic, UUID employeeId, UUID eventId, String payload) throws Exception {
         // Reenvio do mesmo evento como se o processo tivesse parado antes da marcação.
-        var metadata = kafka.send(TOPIC, employeeId.toString(), payload).get(15, TimeUnit.SECONDS).getRecordMetadata();
+        var metadata = kafka.send(topic, employeeId.toString(), payload).get(15, TimeUnit.SECONDS).getRecordMetadata();
         try (var admin = AdminClient.create(Map.of("bootstrap.servers", bootstrap))) {
             await(() -> {
                 try {
                     var offsets = admin.listConsumerGroupOffsets(GROUP).partitionsToOffsetAndMetadata().get(2, TimeUnit.SECONDS);
-                    var committed = offsets.get(new TopicPartition(TOPIC, metadata.partition()));
+                    var committed = offsets.get(new TopicPartition(topic, metadata.partition()));
                     return committed != null && committed.offset() >= metadata.offset() + 1;
                 } catch (Exception exception) { return false; }
             });

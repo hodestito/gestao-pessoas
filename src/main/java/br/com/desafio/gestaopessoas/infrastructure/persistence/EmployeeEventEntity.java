@@ -1,6 +1,6 @@
 package br.com.desafio.gestaopessoas.infrastructure.persistence;
 
-import br.com.desafio.gestaopessoas.infrastructure.messaging.EmployeeCreatedMessage;
+import br.com.desafio.gestaopessoas.infrastructure.messaging.EmployeeEventMessage;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
@@ -20,7 +20,7 @@ public class EmployeeEventEntity implements Persistable<UUID> {
 
     protected EmployeeEventEntity() {}
 
-    public EmployeeEventEntity(EmployeeCreatedMessage event, Instant processedAt, String payload) {
+    public EmployeeEventEntity(EmployeeEventMessage event, Instant processedAt, String payload) {
         eventId = event.eventId();
         employeeId = event.employeeId();
         eventType = event.eventType();

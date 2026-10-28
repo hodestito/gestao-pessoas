@@ -1,6 +1,6 @@
 # Casos de uso
 
-Atualizado em 27/10/2026. Complementa o [modelo de domínio](domain.md). Contratos propostos ainda não são comportamento disponível na API.
+Atualizado em 28/10/2026. Complementa o [modelo de domínio](domain.md). Contratos propostos ainda não são comportamento disponível na API.
 
 ## Visão geral
 
@@ -8,10 +8,10 @@ Atualizado em 27/10/2026. Complementa o [modelo de domínio](domain.md). Contrat
 |---|---|---|---|
 | UC-01 | Criar departamento | POST /departments | Implementado, sujeito à revisão do modelo. |
 | UC-02 | Criar cargo | POST /positions | Implementado, sujeito à revisão do modelo. |
-| UC-03 | Cadastrar colaborador | POST /employees | Outbox, Kafka e histórico implementados nesta branch, aguardando revisão. |
+| UC-03 | Cadastrar colaborador | POST /employees | Outbox, Kafka e histórico integrados à main no PR #4. |
 | UC-04 | Listar colaboradores | GET /employees | Implementado; integração aprovada pelo responsável técnico. |
 | UC-05 | Buscar por departamento | GET /employees/search?department=RH | Implementado, com integração autorizada pelo responsável técnico. |
-| UC-06 | Inativar colaborador | DELETE /employees/{id} | Integrado na main pelo PR #3; evento pendente. |
+| UC-06 | Inativar colaborador | DELETE /employees/{id} | API integrada pelo PR #3; evento implementado nesta branch, aguardando revisão. |
 
 O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo de autenticação/autorização implementado. O enunciado não define papéis de acesso.
 
@@ -95,21 +95,21 @@ O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo 
 
 **Regra confirmada:** inativo representa pessoa que saiu da empresa. DELETE preserva o registro e altera o estado de ativo para inativo.
 
-**Fluxo implementado:** localizar Employee e sua versão; executar o comportamento de inativação; persistir a mudança em uma transação e retornar 204. A emissão de EmployeeStatusChangedEvent ainda não foi implementada.
+**Fluxo implementado:** localizar Employee e sua versão; executar o comportamento de inativação; persistir a mudança e EmployeeStatusChangedEvent na mesma transação e retornar 204. O publicador envia ao tópico employee-status-changed.v1; o consumidor grava o histórico e logs. O evento inclui estado anterior/novo e instante da mudança.
 
-**Tratamento de repetição:** se já estiver inativo, retornar 204 sem nova gravação. Identificador malformado retorna 400; inexistente retorna 404. Ainda não há eventos para publicar.
+**Tratamento de repetição:** se já estiver inativo, retornar 204 sem nova gravação nem outro evento lógico. Identificador malformado retorna 400; inexistente retorna 404, sem evento de inativação.
 
-**Concorrência:** o responsável técnico escolheu bloqueio otimista com `@Version`. Uma alteração com versão antiga falha; após rollback, é feita uma nova tentativa em outra transação. Se ocorrer novo conflito, a API retorna 409. O controle depende de escritores que respeitem e atualizem a versão. Ele não resolve, sozinho, publicação durável ou duplicação de eventos.
+**Concorrência:** o responsável técnico escolheu bloqueio otimista com `@Version`. Uma alteração com versão antiga falha antes do append da Outbox; após rollback, é feita uma nova tentativa em outra transação. Se já estiver inativo, não grava evento. Se ocorrer novo conflito, a API retorna 409. O controle depende de escritores que respeitem e atualizem a versão. Outbox resolve a atomicidade da mudança com a intenção de publicação; o consumidor trata reenvios pela chave do evento.
 
-**Cenários testados:** ativo torna-se inativo mantendo seus dados; inexistente retorna erro; repetição não faz nova gravação; duas requisições simultâneas retornam 204 com uma única alteração; uma gravação com versão antiga é rejeitada. Falha e deduplicação de eventos serão testadas no incremento de mensageria.
+**Cenários testados:** ativo torna-se inativo mantendo seus dados; inexistente retorna erro; repetição não faz nova gravação; duas requisições simultâneas retornam 204 com uma alteração e um evento lógico; uma gravação com versão antiga é rejeitada. Falha simulada na persistência da Outbox e falha injetada após as gravações desfazem status, versão e evento. Kafka real verifica consumo, falha transitória, duplicata com offset confirmado e inativação processada antes da criação. Não se afirma que o teste HTTP força deterministicamente ambas as requisições a lerem a mesma versão.
 
 ## Consumo assíncrono transversal
 
 O enunciado exige consumidores para EmployeeCreatedEvent e EmployeeStatusChangedEvent, com logs customizados e atualização de employee_events.
 
-**Decisão:** Kafka com Outbox, implementado nesta branch apenas para EmployeeCreatedEvent. eventId identifica a ocorrência lógica e é preservado nos reenvios; histórico tem chave única por evento. O payload inclui versão do contrato, tipo, identificadores e instante, sem nome/e-mail. Logs usam identificadores. EmployeeStatusChangedEvent continua pendente.
+**Decisão:** Kafka com Outbox para EmployeeCreatedEvent e EmployeeStatusChangedEvent. Dois tópicos aprovados pelo responsável técnico preservam o tópico de criação. eventId identifica a ocorrência lógica e é preservado nos reenvios; histórico tem chave única por evento. O payload inclui versão do contrato, tipo, identificadores e instante; inativação também inclui previousStatus/newStatus. Não há nome/e-mail. Logs usam tipo, tópico e identificadores.
 
-**Critérios verificados no cadastro:** publicação e consumo com Kafka real, histórico após processamento, espera limitada, falha transitória e duplicata com offset confirmado. O teste de publicação simula falha na marcação após envio; não reinicia o processo. Há reenvios, uma instância validada, sem ordenação garantida, retenção automática ou DLQ. Não afirmar sucesso de consumo apenas porque a API respondeu 201 ou 204.
+**Critérios verificados:** publicação e consumo dos dois eventos com Kafka real, histórico após processamento, espera limitada, falha transitória e duplicata com offset confirmado. O teste de publicação simula falha na marcação após envio; não reinicia o processo. Há reenvios, uma instância validada, sem ordenação entre tópicos, retenção automática ou DLQ. O histórico aceita inativação antes da criação e não altera o agregado. Não afirmar sucesso de consumo apenas porque a API respondeu 201 ou 204.
 
 ## Como revisar cada incremento
 

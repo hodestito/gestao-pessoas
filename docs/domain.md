@@ -1,6 +1,6 @@
 # Domínio: Gestão de Pessoas
 
-Atualizado em 27/10/2026. Documento de trabalho para orientar a implementação e a defesa técnica.
+Atualizado em 28/10/2026. Documento de trabalho para orientar a implementação e a defesa técnica.
 
 ## Como ler este documento
 
@@ -44,7 +44,7 @@ Transferência, reativação, recontratação, edição de cadastro, exclusão d
 | Inativar colaborador produz EmployeeStatusChangedEvent. | Enunciado | Mudança de estado e publicação de eventos. |
 | Consumidores geram logs e atualizam uma tabela de histórico. | Enunciado | Consumidores de eventos e persistência do histórico. |
 
-O cadastro verifica existência e unicidade e persiste colaborador e EmployeeCreatedEvent na mesma transação, usando Outbox. As constraints garantem unicidade e referências; a inativação está integrada à main e usa controle otimista. Nesta branch, Kafka e histórico do cadastro estão implementados; o evento de inativação permanece pendente.
+O cadastro verifica existência e unicidade e persiste colaborador e EmployeeCreatedEvent na mesma transação, usando Outbox. As constraints garantem unicidade e referências; a inativação está integrada à main e usa controle otimista. Nesta branch, a transição também grava EmployeeStatusChangedEvent na mesma transação; Kafka e histórico atendem aos dois tipos.
 
 ## Agregados e invariantes: proposta de modelagem
 
@@ -76,8 +76,8 @@ O enunciado exige serviços de domínio. Ainda precisamos identificar e justific
 
 | Tema | Proposta inicial | Questão ainda aberta |
 |---|---|---|
-| DELETE | Integrado pelo PR #3; inativa e preserva o registro; retorna 204 para alteração ou repetição e 404 para id inexistente. | Estender Outbox para a mudança de estado. |
-| Inativação repetida | O domínio retorna false quando não há mudança; a API responde 204 sem nova gravação. | A garantia de evento não duplicado depende do futuro desenho de publicação e consumo. |
+| DELETE | Integrado pelo PR #3; inativa e preserva o registro; retorna 204 para alteração ou repetição e 404 para id inexistente. | Extensão de Outbox/histórico implementada nesta branch para revisão. |
+| Inativação repetida | O domínio retorna false quando não há mudança; a API responde 204 sem nova gravação nem evento adicional. | Reenvios do mesmo evento lógico podem ocorrer e são deduplicados no histórico. |
 | Listagem | Implementada com filtro opcional por nome e status, ativos e inativos por padrão e paginação. | Avaliar desempenho e estabilidade entre requisições conforme o volume de dados. |
 | Busca por departamento | Implementada com nome exato sem distinguir caixa, paginação, todos os departamentos homônimos e lista vazia quando não há correspondência. | Avaliar requisitos de acentuação e desempenho conforme o uso. |
 
@@ -85,7 +85,7 @@ O limite de 120 caracteres para o nome de Employee foi aprovado pelo candidato. 
 
 ## Transações e eventos
 
-O candidato aprovou Kafka e posteriormente solicitou Outbox. No cadastro, a aplicação registra EmployeeCreatedEvent pela porta EmployeeEventOutbox, na mesma transação do empregado. Um publicador periódico envia ao Kafka após o commit; o consumidor grava o histórico de forma idempotente por eventId. O responsável técnico escolheu JPA para toda a persistência da aplicação. A decisão 006 detalha classes, contrato, transações, testes e limites. A inativação ainda precisa dessa integração.
+O candidato aprovou Kafka, Outbox e JPA para toda a persistência da aplicação. Cadastro e inativação registram seus eventos pela porta EmployeeEventOutbox, na mesma transação da mudança do empregado. O publicador envia após o commit; os consumidores gravam histórico idempotente por eventId. O responsável técnico escolheu dois tópicos preservando employee-created.v1 e acrescentando employee-status-changed.v1. As decisões 006 e 007 detalham classes, contratos, transações, testes e limites. Não há ordem garantida entre tópicos e o histórico não reaplica eventos ao agregado.
 
 Kafka não torna a transação do banco e a publicação atômicas. Sem uma estratégia adicional, a aplicação pode confirmar o cadastro e falhar antes de publicar o evento. A Outbox permite registrar a intenção de publicação na mesma transação do colaborador, com mecanismo posterior de envio; também exige cuidados com duplicatas e operação. Não prometer exactly-once.
 
@@ -95,7 +95,7 @@ Kafka não torna a transação do banco e a publicação atômicas. Sem uma estr
 2. Linguagem compartilhada: iniciada, com definições confirmadas de inativo e cargo.
 3. Regras e cenários: em discussão; consultar a tabela de propostas.
 4. Contexto e agregados: propostos neste documento, ainda sujeitos à revisão.
-5. Modelo de Employee: criação, cadastro, listagem, busca por departamento e inativação pela API implementados; evento de criação com Outbox/Kafka nesta branch; evento de inativação pendente.
-6. Validação do modelo com testes: domínio, aplicação, integração HTTP/banco, concorrência e evento de criação. Testes de evento de inativação e avaliação da cobertura permanecem pendentes.
+5. Modelo de Employee: seis endpoints e evento de criação integrados à main; evento de inativação com Outbox/Kafka implementado nesta branch para revisão.
+6. Validação do modelo com testes: domínio, aplicação, integração HTTP/banco, concorrência e ambos os eventos. Avaliação da cobertura permanece pendente.
 
 Para explicar este passo: quais regras estão confirmadas, quais são propostas e por que uma regra pode precisar da entidade, do caso de uso e do banco trabalhando juntos?

@@ -1,12 +1,12 @@
 # 006 — Cadastro com Outbox e Kafka
 
-Estado: Outbox e uso uniforme de JPA aprovados pelo responsável técnico; implementação no PR #4 aguardando revisão e merge. Criado em 27/10/2026, revisado em 28/10/2026.
+Estado: Outbox e uso uniforme de JPA aprovados e integrados à main pelo PR #4. Criado em 27/10/2026, revisado em 28/10/2026. A extensão para inativação está na decisão 007.
 
 ## Problema, alternativas e decisão
 
 Publicar após o commit com ApplicationEventPublisher e @TransactionalEventListener(AFTER_COMMIT) permite confirmar o cadastro e perder o evento se o processo parar antes do envio. Publicar antes do commit pode produzir um evento de uma operação posteriormente desfeita. Kafka transactions, isoladamente, não tornam a transação PostgreSQL atômica com o broker.
 
-Após discutir complexidade e garantias, o responsável técnico solicitou Outbox. O primeiro incremento cobre apenas EmployeeCreatedEvent: empregado e intenção de publicação são gravados na mesma transação; um publicador periódico envia ao Kafka; o consumidor grava o histórico. EmployeeStatusChangedEvent permanece pendente.
+Após discutir complexidade e garantias, o responsável técnico solicitou Outbox. O primeiro incremento cobriu EmployeeCreatedEvent: empregado e intenção de publicação na mesma transação, publicador periódico e consumidor de histórico. EmployeeStatusChangedEvent é acrescentado no incremento descrito na decisão 007.
 
 A alternativa CDC/Debezium reduz a necessidade de polling, mas adiciona infraestrutura e operação. Reservas com lease/SKIP LOCKED e envio fora da transação melhoram o uso das conexões, mas acrescentam recuperação de reservas e controle de concorrência. Foram adiados para manter este incremento compreensível e adequado ao volume do desafio.
 
@@ -66,7 +66,7 @@ O consumer tem enable-auto-commit=false e AckMode.RECORD. Somente após o métod
 - Sem perfil kafka, há gravação na Outbox, mas nenhum envio.
 - Não há backfill de cadastros anteriores à V4, limpeza automática, monitor de atraso, DLQ ou garantia de ordenação entre eventos.
 - Credenciais/TLS Kafka e operação em produção ficam fora deste incremento local.
-- O evento de inativação será acrescentado em outro incremento, dentro da transação que efetivamente muda o estado.
+- O evento de inativação é tratado na decisão 007, dentro da transação que efetivamente muda o estado.
 
 ## Arquivos e responsabilidades
 
@@ -80,7 +80,7 @@ O consumer tem enable-auto-commit=false e AckMode.RECORD. Somente após o métod
 | Publicação | OutboxPoller, OutboxPublishingTransaction, KafkaOutboxDelivery | Seleção, lock, envio confirmado e retry. |
 | Consumo | EmployeeCreatedKafkaConsumer, EmployeeHistoryWriter | Desserialização, histórico idempotente e logs. |
 | Infraestrutura | pom.xml, docker-compose.yml, application.properties, application-kafka.properties, V4 | Dependências, broker, perfis e tabelas. |
-| Testes | CreateEmployeeTest, EmployeeApiIntegrationTest, EmployeeOutboxIntegrationTest, OutboxPublishingIntegrationTest, EmployeeCreatedKafkaIntegrationTest, EmployeeCreatedKafkaConsumerTest | Regressão, atomicidade, bloqueio, integridade e fluxo com Kafka real. |
+| Testes | CreateEmployeeTest, EmployeeApiIntegrationTest, EmployeeOutboxIntegrationTest, OutboxPublishingIntegrationTest, EmployeeEventsKafkaIntegrationTest, EmployeeCreatedKafkaConsumerTest | Regressão, atomicidade, bloqueio, integridade e fluxo com Kafka real. O teste Kafka foi ampliado e renomeado no incremento 007. |
 | Documentação | README, AI_USAGE, domínio, casos de uso, ADRs 001, 002, 005 e 006 | Estado atual, decisões e uso da IA. |
 
 TransactionalEmployeeRegistration não precisou ser modificado: sua transação já envolve CreateEmployee inteiro, incluindo a nova chamada à Outbox.
