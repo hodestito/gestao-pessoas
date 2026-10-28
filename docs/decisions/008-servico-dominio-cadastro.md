@@ -1,6 +1,6 @@
 # 008 — Serviço de domínio para admissão de empregados
 
-Estado: extração solicitada pelo responsável técnico; implementação em refactor/employee-registration-policy aguardando revisão e aprovação de merge. Data: 28/10/2026.
+Estado: aprovado pelo responsável técnico e integrado à main pelo PR #6. Data: 28/10/2026.
 
 ## Contexto e decisão
 
@@ -36,7 +36,7 @@ flowchart LR
     Save --> DB
 ```
 
-O domínio define as informações de que precisa. A infraestrutura implementa esse contrato; a política não importa interfaces da aplicação que usam Page/Pageable nem conhece entidades JPA.
+O domínio define as informações de que precisa. A infraestrutura implementa esse contrato; a política não conhece entidades JPA. A revisão posterior da decisão 009 também remove Page/Pageable dos contratos da aplicação.
 
 A dependência é fornecida pelo construtor. ApplicationConfig cria EmployeeRegistrationPolicy com @Bean; a política não recebe @Service. A classificação como serviço de domínio vem da responsabilidade de negócio, não de uma anotação do Spring.
 
@@ -62,7 +62,7 @@ Chaves estrangeiras também permanecem necessárias: a consulta prévia de exist
 
 A política é sem estado mutável por requisição; suas consultas podem depender do banco por meio da porta. “Independente de frameworks” não significa que o resultado seja independente do estado externo.
 
-O modelo de identidade de Department e Position, ainda records, permanece para outra decisão. Este incremento não altera as regras desses cadastros, o esquema, os contratos Kafka ou a lógica da Outbox.
+O modelo de identidade de Department e Position é revisado na decisão 009, com classes finais e igualdade por ID. A extração da política não alterou as regras desses cadastros, o esquema, os contratos Kafka ou a lógica da Outbox.
 
 ## Arquivos alterados
 

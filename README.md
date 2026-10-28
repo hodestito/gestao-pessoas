@@ -1,6 +1,6 @@
 # Gestão de pessoas — desafio técnico
 
-Projeto em construção para o desafio técnico. Os seis endpoints e os eventos de criação e inativação, com Outbox JPA, Kafka e histórico, estão integrados à main. Esta branch extrai as regras de admissão de empregados para um serviço de domínio, para revisão.
+Projeto em construção para o desafio técnico. Os seis endpoints, os eventos com Outbox/Kafka e o serviço de domínio de admissão estão integrados à main. Esta branch remove Spring Data dos contratos da aplicação e alinha a identidade de Department e Position ao ID, para revisão.
 
 Employee contempla criação ativa, e-mail normalizado e inativação no domínio. Cadastro e inativação persistem empregado e seu evento na mesma transação. A inativação preserva o registro, usa controle otimista de versão e só registra evento se houver mudança efetiva.
 
@@ -10,12 +10,13 @@ Employee contempla criação ativa, e-mail normalizado e inativação no domíni
 - [Casos de uso](docs/use-cases.md): os seis fluxos, contratos existentes/propostos e cenários de aceitação.
 - [Decisão 001](docs/decisions/001-employee-e-kafka.md): identidade de Employee, regras aprovadas e direção para Kafka.
 - [Decisão 002](docs/decisions/002-cadastro-employee.md): transação, persistência e respostas do cadastro.
-- [Decisão 003](docs/decisions/003-listagem-colaboradores.md): Page, filtros e limites da listagem.
+- [Decisão 003](docs/decisions/003-listagem-colaboradores.md): paginação, filtros e limites da listagem.
 - [Decisão 004](docs/decisions/004-busca-por-departamento.md): busca por departamento e critérios adotados para revisão.
 - [Decisão 005](docs/decisions/005-inativacao-version.md): inativação, concorrência e transações.
 - [Decisão 006](docs/decisions/006-outbox-cadastro.md): Outbox, publicação Kafka, idempotência, limites e arquivos envolvidos.
 - [Decisão 007](docs/decisions/007-evento-inativacao.md): evento de inativação, dois tópicos e histórico compartilhado.
 - [Decisão 008](docs/decisions/008-servico-dominio-cadastro.md): política de admissão, consultas do domínio e divisão de responsabilidades.
+- [Decisão 009](docs/decisions/009-nucleo-independente-e-identidade.md): paginação própria e identidade das entidades por ID.
 - [Uso de IA](AI_USAGE.md): participação da IA e padrão dos commits identificados com `[IA]`.
 
 Os documentos distinguem requisitos do enunciado, definições do candidato, propostas e comportamento implementado. O Git registra a evolução real; os documentos apresentam o entendimento atual. A arquitetura detalhada e outros registros de decisão serão acrescentados conforme discutirmos essas decisões.
@@ -31,6 +32,10 @@ Os documentos distinguem requisitos do enunciado, definições do candidato, pro
 O domínio concentra validações e não depende do Spring ou do JPA. EmployeeRegistrationPolicy decide se departamento/cargo existem e se o e-mail está disponível, consultando a porta EmployeeRegistrationRequirements. O adaptador JPA fornece essas informações. CreateEmployee coordena validação, criação/persistência e Outbox dentro da transação. A API valida as entradas e retorna `201 Created` com o identificador gerado.
 
 A política é uma classe Java sem @Service; o Spring a instancia na configuração. Employee protege seus valores e transições; a política reúne condições que envolvem outros registros; o caso de uso coordena a operação; constraints de unicidade e chaves estrangeiras garantem integridade sob concorrência.
+
+Domínio e aplicação usam apenas tipos próprios e da biblioteca Java. EmployeePagination valida os parâmetros de consulta e PageResult representa o resultado; somente a infraestrutura converte esses tipos para PageRequest/Page do Spring Data e aplica a ordenação contratada. O JSON paginado mantém content, page, size, totalElements e totalPages.
+
+Employee, Department e Position são entidades com igualdade e hashCode por ID, dentro do próprio tipo. Department e Position são classes finais com dados imutáveis e as mesmas validações/acessores anteriores. Email e CostCenterCode continuam sendo objetos de valor, comparados por seus valores.
 
 Exemplos com a aplicação em execução na porta 8080:
 
@@ -125,8 +130,8 @@ O teste Kafka cria e remove seus próprios tópicos e grupo. Verifica criação,
 
 ## Próximos incrementos
 
-1. Revisar e integrar a extração da política de admissão após aprovação do responsável técnico.
-2. Revisar regras de domínio e casos de uso com o responsável técnico.
+1. Revisar e integrar a paginação própria e a identidade de Department/Position após aprovação do responsável técnico.
+2. Medir cobertura e fechar lacunas relevantes dos testes.
 3. Revisar operação da mensageria, retenção e tratamento de mensagens inválidas conforme o escopo.
 4. Acrescentar testes de integração, Docker, documentação da API e registro do uso de IA.
 

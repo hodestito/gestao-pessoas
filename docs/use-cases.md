@@ -73,11 +73,11 @@ O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo 
 
 **Contrato implementado:** retornar 200 com uma página de colaboradores, incluindo ativos e inativos quando status não é informado. Sem dados, retornar coleção vazia. `page` começa em 0; `size` varia de 1 a 100 e tem padrão 20. Ordenação crescente por createdAt e depois id. A ordenação é determinística para o conjunto consultado, mas alterações entre requisições podem deslocar itens entre páginas.
 
-**Dados retornados:** id, name, email, departmentId, positionId, createdAt e status. A resposta possui content, page, size, totalElements e totalPages; não expõe entidades JPA nem depende do formato JSON padrão de Page.
+**Dados retornados:** id, name, email, departmentId, positionId, createdAt e status. A resposta possui content, page, size, totalElements e totalPages; não expõe entidades JPA nem depende do formato JSON padrão de Page. A aplicação usa PageResult e EmployeePagination próprios; o adaptador JPA concentra a conversão para Spring Data.
 
 **Filtros:** name opcional, parcial, sem diferenciar caixa e sem garantia de ignorar acentos; valores vazios ou só com espaços não filtram. `%`, `_` e `!` são tratados literalmente. status opcional aceita ACTIVE ou INACTIVE. Não há filtro por id neste incremento.
 
-**Erros:** 400 para parâmetros de paginação inválidos, status não reconhecido ou deslocamento maior que o limite do JPA. O limite de tamanho e o cálculo do deslocamento também são verificados no caso de uso.
+**Erros:** 400 para parâmetros de paginação inválidos, status não reconhecido ou deslocamento maior que o limite suportado. EmployeePagination valida tamanho e deslocamento ao ser criado pelo caso de uso, inclusive por construção direta.
 
 **Cenários testados:** coleção vazia, combinação de nome e status, páginas e desempate por id, caracteres literais de busca, limites e entradas inválidas. Listagem não produz evento de negócio.
 
