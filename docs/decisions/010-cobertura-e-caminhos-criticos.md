@@ -1,6 +1,6 @@
 # 010 — Cobertura e caminhos críticos
 
-Estado: incremento em test/coverage-and-critical-paths aguardando revisão e aprovação de merge. O PR #7 foi integrado antes do início desta etapa, conforme autorização do responsável técnico. Data: 28/10/2026.
+Estado: integrado à main pelo PR #8, após aprovação explícita do responsável técnico. O PR #7 foi integrado antes do início desta etapa. Data: 28/10/2026. As medições abaixo registram o estado desse incremento; novas classes podem alterar os denominadores.
 
 ## Objetivo e abordagem
 

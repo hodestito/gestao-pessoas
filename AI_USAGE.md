@@ -55,6 +55,14 @@
 
 **Resultado:** foram distinguidos a parametrização JDBC e o escape de curingas do `LIKE`. A revisão resultou em testes de caracteres especiais, tentativa de SQL injection e inspeção do SQL gerado, executados em H2 e PostgreSQL.
 
+### Documentação HTTP
+
+**Instrução:** “Seguimos. Proximo passo”. O plano apresentado foi documentar os seis endpoints com OpenAPI/Swagger, após a etapa de cobertura. O merge do PR #8 recebeu aprovação explícita separada.
+
+**Resultado:** a IA acrescentou springdoc-openapi 3.2.0, configuração de metadados/esquemas e anotações nos controllers e DTOs HTTP. Foram comparadas descoberta automática, anotações e YAML manual; a documentação próxima dos endpoints evita duplicar o contrato em um arquivo estático. Domínio e aplicação não receberam dependências de documentação.
+
+**Revisão e validação:** respostas HTTP reais foram inspecionadas antes da documentação para preservar os dois formatos de erro existentes. Os testes verificam o documento gerado, referências, paginação, códigos de resposta e recursos locais da UI. Um teste detectou a ausência dos padrões de paginação no Schema; a descrição foi corrigida sem alterar a API. A decisão 011 registra alternativas, limites e resultados.
+
 ## Decisões influenciadas por IA e revisão técnica
 
 1. **Domínio e arquitetura:** a IA propôs uma organização em camadas e a separação do domínio de frameworks. O modelo foi revisto com o responsável técnico; os limites e as decisões permanecem documentados em `docs/decisions/`.

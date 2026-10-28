@@ -1,6 +1,6 @@
 # Gestão de pessoas — desafio técnico
 
-Projeto em construção para o desafio técnico. Os seis endpoints, os eventos com Outbox/Kafka, a política de admissão e a revisão de paginação/identidade estão integrados à main. Esta branch acrescenta medição de cobertura e testes de falha, para revisão.
+Projeto em construção para o desafio técnico. Os seis endpoints, os eventos com Outbox/Kafka, a política de admissão, a revisão de paginação/identidade e a cobertura estão integrados à main. Esta branch acrescenta documentação OpenAPI/Swagger, para revisão.
 
 Employee contempla criação ativa, e-mail normalizado e inativação no domínio. Cadastro e inativação persistem empregado e seu evento na mesma transação. A inativação preserva o registro, usa controle otimista de versão e só registra evento se houver mudança efetiva.
 
@@ -18,6 +18,7 @@ Employee contempla criação ativa, e-mail normalizado e inativação no domíni
 - [Decisão 008](docs/decisions/008-servico-dominio-cadastro.md): política de admissão, consultas do domínio e divisão de responsabilidades.
 - [Decisão 009](docs/decisions/009-nucleo-independente-e-identidade.md): paginação própria e identidade das entidades por ID.
 - [Decisão 010](docs/decisions/010-cobertura-e-caminhos-criticos.md): medição de cobertura, lacunas priorizadas e resultados.
+- [Decisão 011](docs/decisions/011-openapi-swagger.md): documentação HTTP, alternativas e limites do contrato gerado.
 - [Uso de IA](AI_USAGE.md): participação da IA e padrão dos commits identificados com `[IA]`.
 
 Os documentos distinguem requisitos do enunciado, definições do candidato, propostas e comportamento implementado. O Git registra a evolução real; os documentos apresentam o entendimento atual. A arquitetura detalhada e outros registros de decisão serão acrescentados conforme discutirmos essas decisões.
@@ -56,6 +57,16 @@ A listagem aceita filtros opcionais `name` e `status`, páginas iniciadas em zer
 A busca por departamento usa correspondência exata sem diferenciar maiúsculas/minúsculas, inclui ativos e inativos e retorna colaboradores de todos os departamentos com o mesmo nome. Department ausente ou vazio resulta em 400; nenhum resultado retorna 200 com conteúdo vazio.
 
 A inativação retorna 204 quando realizada ou quando o colaborador já estava inativo; ID inexistente retorna 404. Um segundo conflito de versão após uma nova tentativa retorna 409. Substitua o identificador pelo UUID do colaborador. Somente a transição efetiva registra EmployeeStatusChangedEvent, com previousStatus=ACTIVE e newStatus=INACTIVE. A resposta 204 não espera a publicação nem o histórico.
+
+## Documentação interativa da API
+
+Com a aplicação em execução, acesse [Swagger UI](http://localhost:8080/swagger-ui.html). O contrato é gerado em [OpenAPI JSON](http://localhost:8080/v3/api-docs) e [OpenAPI YAML](http://localhost:8080/v3/api-docs.yaml). A interface usa recursos locais, sem depender de CDN. Ela permite executar requisições reais no ambiente conectado; cadastros e inativações alteram seus dados.
+
+springdoc-openapi 3.2.0 lê os controllers e DTOs HTTP. OpenAPI é o formato do contrato; Swagger UI apresenta esse contrato e permite explorá-lo. As anotações documentam filtros, paginação, referências por UUID, exemplos, respostas e a confirmação assíncrona dos eventos. Não foram acrescentadas dependências de documentação ao domínio ou à aplicação.
+
+O contrato preserva os dois formatos atuais de erro: ApiError (`code`, `message`) nas falhas tratadas da aplicação e FrameworkError (`timestamp`, `status`, `error`, `path`) em falhas padrão do Spring. Onde ambos são possíveis, usa oneOf. O DELETE de um ID inexistente retorna 404 sem corpo. As anotações descrevem o comportamento e não substituem validações nem testes.
+
+Para experimentar o cadastro, crie departamento e cargo primeiro e copie seus IDs para o corpo de Employee. Os UUIDs de exemplo da documentação são ilustrativos. 201/204 confirmam a operação e a intenção na Outbox; não garantem que o histórico Kafka já tenha sido processado. Os contratos dos tópicos permanecem nas decisões 006 e 007; OpenAPI descreve somente HTTP.
 
 ## Primeira verificação
 
@@ -148,27 +159,26 @@ Com o banco PostgreSQL exclusivo já criado na seção anterior:
 
 O relatório HTML fica em target/site/jacoco/index.html; o XML, em target/site/jacoco/jacoco.xml; os dados de execução, em target/jacoco.exec. No Mac, abra o HTML com `open target/site/jacoco/index.html`. target/ é gerado localmente e não é versionado. Cada execução substitui os dados anteriores; clean remove relatórios antigos. Executar apenas test não atualiza o HTML/XML, pois o relatório está ligado ao verify.
 
-Medição de 28/10/2026, com 83 testes sem falhas ou ignorados em cada banco, incluindo Kafka real:
+Medição de 28/10/2026, incluindo a documentação OpenAPI, com 87 testes sem falhas ou ignorados em cada banco, incluindo Kafka real:
 
 | Escopo | Linhas | Ramos |
 |---|---:|---:|
-| Total | 99,03% (408/412) | 95,69% (111/116) |
+| Total | 99,07% (426/430) | 95,69% (111/116) |
 | Domínio | 100% (92/92) | 90,48% (38/42) |
 | Aplicação | 100% (60/60) | 100% (30/30) |
-| Infraestrutura | 99,04% (207/209) | 96,55% (28/29) |
+| Infraestrutura | 99,12% (225/227) | 96,55% (28/29) |
 | Interfaces | 100% (48/48) | 100% (15/15) |
 
 Os números foram iguais no H2 e no PostgreSQL, em execuções separadas, sem somar seus dados. O relatório inclui todas as classes de produção analisáveis, sem exclusões manuais. A medição inicial, com 74 testes, era de 94,90% de linhas e 81,03% de ramos.
 
-Os testes adicionais verificam listagem HTTP sem filtros/nome em branco, contratos Kafka inválidos sem escrita de histórico, tipo desconhecido sem envio ao tópico errado, processamento do lote após um evento adiado, interrupção do poller e tradução de falhas conhecidas/desconhecidas da persistência.
+Os testes adicionais verificam listagem HTTP sem filtros/nome em branco, contratos Kafka inválidos sem escrita de histórico, tipo desconhecido sem envio ao tópico errado, processamento do lote após um evento adiado, interrupção do poller e tradução de falhas conhecidas/desconhecidas da persistência. Os quatro testes de OpenAPI conferem o contrato gerado, referências, paginação, erros e recursos locais da UI. A medição histórica do PR #8 permanece na decisão 010.
 
 Cobertura mostra código executado, não comprova todas as regras, concorrências ou falhas de infraestrutura. A meta sugerida de 80% serve como referência; não há gate percentual automático configurado. Sem -Dkafka.tests=true, os dois testes Kafka reais ficam ignorados e os percentuais podem mudar. As lacunas e limites estão na decisão 010.
 
 ## Próximos incrementos
 
-1. Revisar e integrar cobertura e testes de falha após aprovação do responsável técnico.
-2. Documentar a API com OpenAPI/Swagger.
-3. Criar Dockerfile e validar a aplicação no Compose.
-4. Consolidar documentação, CI, revisão final e defesa técnica; avaliar melhorias operacionais conforme o prazo.
+1. Revisar e integrar a documentação OpenAPI/Swagger após aprovação do responsável técnico.
+2. Criar Dockerfile e validar a aplicação no Compose.
+3. Consolidar documentação, CI, revisão final e defesa técnica; avaliar melhorias operacionais conforme o prazo.
 
-Dockerfile, documentação Swagger e CI continuam pendentes.
+Dockerfile e CI continuam pendentes.
