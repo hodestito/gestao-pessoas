@@ -18,5 +18,7 @@ public class ApplicationConfig {
     @Bean SearchEmployeesByDepartment searchEmployeesByDepartment(EmployeeRepository employees) {
         return new SearchEmployeesByDepartment(employees);
     }
-    @Bean DeactivateEmployee deactivateEmployee(EmployeeRepository employees) { return new DeactivateEmployee(employees); }
+    @Bean DeactivateEmployee deactivateEmployee(EmployeeRepository employees, EmployeeEventOutbox outbox, Clock clock) {
+        return new DeactivateEmployee(employees, outbox, clock, UUID::randomUUID);
+    }
 }

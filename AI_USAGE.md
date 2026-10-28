@@ -7,6 +7,12 @@
 
 ## Prompts e interações efetivas
 
+### Evento de inativação
+
+**Instrução e decisão:** “ok. Vamos para o proximo passo” e “Dois tópicos, preservando o atual”.
+
+**Resultado:** após apresentar classes e alternativas, foi implementado o fluxo de inativação com Outbox JPA, contrato específico e consumidor Kafka. O compartilhamento do histórico ficou em um handler e em metadados comuns; a desserialização continua usando um tipo concreto por tópico. Os testes incluem rollback da versão/status, repetição, concorrência e reenvio.
+
 ### Modelagem de domínio
 
 **Pergunta:** “Temos um arquitetura definida? Usamos DDD antes de começar a criar classes?”
@@ -23,7 +29,7 @@
 
 **Perguntas e instrução:** “O quanto acrescentaria de complexidade se consideramos outbox?” e “Implemente com outbox”.
 
-**Resultado:** a proposta de listener AFTER_COMMIT foi substituída por Outbox transacional com polling. A IA implementou o fluxo de cadastro, publicação Kafka e histórico idempotente. Foram explicitados reenvios, falhas de confirmação, bloqueio de linha durante o envio e o limite de uma instância validada. O evento de inativação fica para o incremento seguinte.
+**Resultado:** a proposta de listener AFTER_COMMIT foi substituída por Outbox transacional com polling. A IA implementou o fluxo de cadastro, publicação Kafka e histórico idempotente. Foram explicitados reenvios, falhas de confirmação, bloqueio de linha durante o envio e o limite de uma instância validada. O evento de inativação foi acrescentado no incremento descrito na decisão 007.
 
 ### Consulta e segurança
 
@@ -37,7 +43,8 @@
 2. **Cadastro:** após discussão, o responsável técnico aprovou e-mail único inclusive para inativos, departamento e cargo existentes, HTTP 409 para e-mail duplicado, HTTP 422 para referências inexistentes e uma transação por cadastro. Uma constraint no banco complementa a consulta prévia de e-mail.
 3. **Listagem e busca:** o responsável técnico escolheu `Page` do Spring Data. A IA implementou filtros e paginação, e documentou o acoplamento, o custo potencial de contagem e os limites de paginação por deslocamento. A busca por departamento foi implementada com correspondência exata sem diferenciar caixa; departamentos homônimos são incluídos.
 4. **Mensageria:** Kafka e Outbox foram escolhidos pelo responsável técnico após comparação de alternativas. Empregado e evento são gravados na mesma transação; o publicador aguarda confirmação do broker e o consumidor deduplica por eventId. Após revisão, o responsável técnico escolheu JPA também para Outbox/histórico para uniformizar a persistência. O bloqueio do publicador é pessimista; o controle otimista de Employee permanece separado.
-5. **Inativação e concorrência:** o responsável técnico escolheu `@Version` após comparar bloqueio otimista, pessimista e atualização condicional. A IA implementou a inativação com releitura limitada após conflito, testes de concorrência e documentação da decisão. A emissão do evento continua pendente.
+5. **Inativação e concorrência:** o responsável técnico escolheu `@Version` após comparar bloqueio otimista, pessimista e atualização condicional. A IA implementou a releitura limitada após conflito e, neste incremento, a gravação de EmployeeStatusChangedEvent na mesma transação da mudança. Repetição sem transição não gera outro evento lógico.
+6. **Tópicos e contratos:** ao comparar um tópico comum com dois tópicos, o responsável técnico escolheu “Dois tópicos, preservando o atual”. A IA acrescentou employee-status-changed.v1 e manteve employee-created.v1, reutilizando Outbox e histórico. A ausência de ordem entre tópicos foi documentada e testada processando a inativação antes da criação.
 
 ## Limitações e como foram tratadas
 

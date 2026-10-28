@@ -32,6 +32,7 @@ class EmployeeDeactivationApiIntegrationTest {
     }
 
     @AfterEach void cleanup() {
+        jdbc.update("delete from outbox_events where employee_id = ?", employee);
         jdbc.update("delete from employees where id = ?", employee);
         jdbc.update("delete from positions where id = ?", position);
         jdbc.update("delete from departments where id = ?", department);
@@ -49,11 +50,14 @@ class EmployeeDeactivationApiIntegrationTest {
         assertEquals(204, delete(employee.toString()).statusCode());
         assertEquals(1L, jdbc.queryForObject("select version from employees where id = ?", Long.class, employee));
         assertEquals("Hugo", jdbc.queryForObject("select name from employees where id = ?", String.class, employee));
+        assertEquals(1, jdbc.queryForObject("select count(*) from outbox_events where employee_id = ? and event_type = 'EmployeeStatusChangedEvent'",
+                Integer.class, employee));
     }
 
     @Test void distinguishesMissingAndInvalidId() throws Exception {
         assertEquals(404, delete(UUID.randomUUID().toString()).statusCode());
         assertEquals(400, delete("invalid-uuid").statusCode());
+        assertEquals(0, jdbc.queryForObject("select count(*) from outbox_events where employee_id = ?", Integer.class, employee));
     }
 
     @Test void concurrentRequestsRemainIdempotent() throws Exception {
@@ -63,6 +67,7 @@ class EmployeeDeactivationApiIntegrationTest {
         assertEquals(204, second.get(15, TimeUnit.SECONDS));
         assertEquals("INACTIVE", jdbc.queryForObject("select status from employees where id = ?", String.class, employee));
         assertEquals(1L, jdbc.queryForObject("select version from employees where id = ?", Long.class, employee));
+        assertEquals(1, jdbc.queryForObject("select count(*) from outbox_events where employee_id = ?", Integer.class, employee));
     }
 
     private int deleteUnchecked() {

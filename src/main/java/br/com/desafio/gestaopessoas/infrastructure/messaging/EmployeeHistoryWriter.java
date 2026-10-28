@@ -19,7 +19,7 @@ public class EmployeeHistoryWriter {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void record(EmployeeCreatedMessage event, String payload) {
+    public void record(EmployeeEventMessage event, String payload) {
         repository.saveAndFlush(new EmployeeEventEntity(event, clock.instant(), payload));
     }
 

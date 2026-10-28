@@ -34,7 +34,7 @@ public class OutboxPublishingTransaction {
         if (pending.isEmpty()) return false;
         var event = pending.orElseThrow();
         try {
-            delivery.send(event.employeeId(), event.payload());
+            delivery.send(event.eventType(), event.employeeId(), event.payload());
         } catch (Exception failure) {
             if (failure instanceof InterruptedException) Thread.currentThread().interrupt();
             // Não persiste payload nem mensagens de erro potencialmente sensíveis.

@@ -79,7 +79,8 @@ class CreateEmployeeTest {
 
     @Test void outboxFailureIsPropagatedSoTransactionCanRollback() {
         when(employees.save(any())).thenAnswer(i -> i.getArgument(0));
-        doThrow(new IllegalStateException("outbox failed")).when(outbox).append(any());
+        doThrow(new IllegalStateException("outbox failed")).when(outbox)
+                .append(any(br.com.desafio.gestaopessoas.domain.employee.EmployeeCreatedEvent.class));
         assertThrows(IllegalStateException.class, () -> useCase.execute("Hugo", "hugo@example.com", department, position));
     }
 }

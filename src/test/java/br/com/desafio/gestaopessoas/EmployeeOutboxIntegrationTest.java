@@ -77,7 +77,7 @@ class EmployeeOutboxIntegrationTest {
     @Test void repeatedDeliveryCommitsHistoryOnceAndRejectsWrongKey() {
         var employee = registration.execute("Teste", email, department, position);
         String payload = jdbc.queryForObject("select payload from outbox_events where employee_id=?", String.class, employee.id());
-        var consumer = new EmployeeCreatedKafkaConsumer(json, history);
+        var consumer = new EmployeeCreatedKafkaConsumer(json, new EmployeeEventHistoryHandler(history));
         var record = new ConsumerRecord<>("test", 0, 0, employee.id().toString(), payload);
         consumer.consume(record);
         consumer.consume(record);

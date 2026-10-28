@@ -21,6 +21,11 @@ public class KafkaMessagingConfig {
     }
 
     @Bean
+    NewTopic employeeStatusChangedTopic(@Value("${app.messaging.status-topic}") String topic) {
+        return TopicBuilder.name(topic).partitions(1).replicas(1).build();
+    }
+
+    @Bean
     DefaultErrorHandler employeeEventErrorHandler() {
         // Não confirma nem descarta uma mensagem que não conseguiu persistir.
         var handler = new DefaultErrorHandler(new FixedBackOff(1000, FixedBackOff.UNLIMITED_ATTEMPTS));
