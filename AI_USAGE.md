@@ -7,6 +7,12 @@
 
 ## Prompts e interações efetivas
 
+### Serviço de domínio
+
+**Pergunta e instrução:** “O que é serviço de dominio?” e “Crie as regras numa classe de serviço de dominio”.
+
+**Resultado:** foram comparadas a coordenação na aplicação e a política de admissão no domínio. O responsável técnico aprovou a extração das regras existentes, sem inventar novas condições. EmployeeRegistrationPolicy consulta uma porta do domínio implementada por JPA; a exceção de regra foi movida para o domínio. Os testes separam decisão de negócio, coordenação e integração HTTP.
+
 ### Evento de inativação
 
 **Instrução e decisão:** “ok. Vamos para o proximo passo” e “Dois tópicos, preservando o atual”.
@@ -45,6 +51,7 @@
 4. **Mensageria:** Kafka e Outbox foram escolhidos pelo responsável técnico após comparação de alternativas. Empregado e evento são gravados na mesma transação; o publicador aguarda confirmação do broker e o consumidor deduplica por eventId. Após revisão, o responsável técnico escolheu JPA também para Outbox/histórico para uniformizar a persistência. O bloqueio do publicador é pessimista; o controle otimista de Employee permanece separado.
 5. **Inativação e concorrência:** o responsável técnico escolheu `@Version` após comparar bloqueio otimista, pessimista e atualização condicional. A IA implementou a releitura limitada após conflito e, neste incremento, a gravação de EmployeeStatusChangedEvent na mesma transação da mudança. Repetição sem transição não gera outro evento lógico.
 6. **Tópicos e contratos:** ao comparar um tópico comum com dois tópicos, o responsável técnico escolheu “Dois tópicos, preservando o atual”. A IA acrescentou employee-status-changed.v1 e manteve employee-created.v1, reutilizando Outbox e histórico. A ausência de ordem entre tópicos foi documentada e testada processando a inativação antes da criação.
+7. **Admissão no domínio:** o responsável técnico solicitou uma classe de serviço de domínio para as regras de departamento, cargo e e-mail. A IA implementou uma política independente de frameworks, uma porta de consulta e o adaptador JPA. CreateEmployee mantém a coordenação; o banco continua sendo a garantia final sob concorrência.
 
 ## Limitações e como foram tratadas
 
