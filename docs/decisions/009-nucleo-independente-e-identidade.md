@@ -80,4 +80,4 @@ Os DTOs HTTP de departamento/cargo já eram separados do domínio. Continuam rec
 - Testes de paginação cobrem limites de construção direta, total vazio/exato/parcial, contagem extrema sem overflow, cópia imutável da lista, metadados inválidos e página além da última.
 - Integração HTTP mantém filtros, SQL parametrizado, ordenação e desempate, paginação, campos/totalizadores e JSONs de departamentos/cargos.
 - A suíte de eventos existente permanece cobrindo Outbox, rollback, publicação e consumo dos dois contratos Kafka, inclusive duplicatas e consumo em ordem inversa.
-- Não houve alteração de migração/esquema. A medição de cobertura foi acrescentada no incremento da decisão 010; Testcontainers continua adiado.
+- Não houve alteração de migração/esquema. Cobertura e Testcontainers foram acrescentados posteriormente, nas decisões [010](010-cobertura-e-caminhos-criticos.md) e [014](014-testcontainers.md).

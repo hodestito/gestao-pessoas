@@ -1,6 +1,6 @@
 # 002 — Cadastro de colaborador
 
-Estado: cadastro e Outbox/Kafka integrados à main. A extração da política de admissão para domínio está implementada para revisão na decisão 008. Criado em 27/10/2026, atualizado em 28/10/2026.
+Estado: cadastro, Outbox/Kafka e política de admissão da decisão 008 integrados à main. Criado em 27/10/2026, atualizado em 28/10/2026.
 
 ## Decisões
 

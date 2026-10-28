@@ -1,8 +1,8 @@
 # 004 — Busca de colaboradores por departamento
 
-Estado: implementação revisada e integração à main autorizada pelo responsável técnico. Data: 27/10/2026.
+Estado: revisado e integrado à main pelo PR #2 após aprovação do responsável técnico. Data: 27/10/2026.
 
-## Contexto e decisão proposta
+## Contexto e decisão adotada
 
 O enunciado exige `GET /employees/search?department=RH`, sem definir se a busca é parcial nem o tratamento de nomes repetidos. Foi implementada a correspondência exata, sem diferenciar caixa, depois de remover espaços nas extremidades. Nomes de departamento não são únicos no modelo atual: todos os departamentos homônimos são incluídos, com colaboradores ativos e inativos.
 
