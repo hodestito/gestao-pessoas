@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Java 21, PostgreSQL, Kafka e Docker
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      COMPOSE_PROJECT_NAME: gestao-ci
+    steps:
+      - name: Obter fontes
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Configurar JDK 21 e cache Maven
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Iniciar dependências e criar banco exclusivo de testes
+        run: |
+          docker compose config --quiet
+          docker compose up -d --wait --wait-timeout 180 postgres kafka
+          docker compose exec -T postgres createdb -U gestao gestao_pessoas_test
+
+      - name: Executar testes, empacotar e medir cobertura
+        run: >-
+          ./mvnw -B -ntp clean verify
+          -Dkafka.tests=true
+          -Dspring.profiles.active=postgres
+          -Dspring.datasource.url=jdbc:postgresql://localhost:5432/gestao_pessoas_test
+          -Dspring.datasource.username=gestao
+          -Dspring.datasource.password=gestao_local
+
+      - name: Construir imagem da aplicação
+        run: docker compose build app
+
+      - name: Coletar logs dos serviços
+        if: always()
+        run: docker compose logs --no-color postgres kafka > compose.log
+
+      - name: Preservar relatórios e logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: verificacao-java-postgres-kafka
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            target/surefire-reports/
+            target/site/jacoco/
+            compose.log
+
+      - name: Remover ambiente descartável do runner
+        if: always()
+        run: docker compose down -v --remove-orphans

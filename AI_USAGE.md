@@ -71,6 +71,14 @@
 
 **Decisões e limites:** foram comparados build dentro do Docker e cópia de JAR previamente compilado. O empacotamento da imagem ignora execução de testes; a validação usa a suíte separada e o fluxo HTTP/Kafka no ambiente final. A checagem Kafka usa o listener interno, pois a porta publicada no Mac pode mudar. A validação usa projeto Compose, portas e volumes próprios, preservando os dados de desenvolvimento. A decisão 012 registra comandos, alternativas e resultados reais.
 
+### Integração contínua
+
+**Instrução:** “Aprovado.”, após a revisão de Docker/Compose e a indicação de CI como próximo incremento.
+
+**Resultado:** a IA integrou o PR #10 e apresentou o plano de um workflow com JDK 21, Maven Wrapper, PostgreSQL/Kafka reais, relatórios e construção da imagem. O workflow reutiliza o Compose existente, cria uma base exclusiva no runner e habilita explicitamente os testes Kafka. As actions oficiais foram consultadas e fixadas por SHA.
+
+**Decisões e limites:** optou-se por um job com PostgreSQL/Kafka em vez de duplicar configuração de serviços ou criar matriz H2/PostgreSQL. A imagem só é construída após os testes; sua execução completa foi validada na etapa Docker. Não foram introduzidos gate percentual ou proteção de branch. A decisão 013 distingue implementação do workflow de comprovação de execução remota.
+
 ## Decisões influenciadas por IA e revisão técnica
 
 1. **Domínio e arquitetura:** a IA propôs uma organização em camadas e a separação do domínio de frameworks. O modelo foi revisto com o responsável técnico; os limites e as decisões permanecem documentados em `docs/decisions/`.
