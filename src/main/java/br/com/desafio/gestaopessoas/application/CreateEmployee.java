@@ -2,6 +2,7 @@ package br.com.desafio.gestaopessoas.application;
 
 import br.com.desafio.gestaopessoas.domain.employee.Email;
 import br.com.desafio.gestaopessoas.domain.employee.Employee;
+import br.com.desafio.gestaopessoas.domain.employee.EmployeeCreatedEvent;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
@@ -14,14 +15,16 @@ public class CreateEmployee {
     private final PositionRepository positions;
     private final Clock clock;
     private final Supplier<UUID> ids;
+    private final EmployeeEventOutbox outbox;
 
     public CreateEmployee(EmployeeRepository employees, DepartmentRepository departments,
-                          PositionRepository positions, Clock clock, Supplier<UUID> ids) {
+                          PositionRepository positions, Clock clock, Supplier<UUID> ids, EmployeeEventOutbox outbox) {
         this.employees = employees;
         this.departments = departments;
         this.positions = positions;
         this.clock = clock;
         this.ids = ids;
+        this.outbox = outbox;
     }
 
     public Employee execute(String name, String address, UUID departmentId, UUID positionId) {
@@ -30,6 +33,8 @@ public class CreateEmployee {
         if (!departments.existsById(departmentId)) throw new EmployeeRegistrationException(DEPARTMENT_NOT_FOUND);
         if (!positions.existsById(positionId)) throw new EmployeeRegistrationException(POSITION_NOT_FOUND);
         if (employees.existsByEmail(email)) throw new EmployeeRegistrationException(EMAIL_ALREADY_EXISTS);
-        return employees.save(employee);
+        Employee saved = employees.save(employee);
+        outbox.append(new EmployeeCreatedEvent(ids.get(), saved.id(), saved.createdAt()));
+        return saved;
     }
 }

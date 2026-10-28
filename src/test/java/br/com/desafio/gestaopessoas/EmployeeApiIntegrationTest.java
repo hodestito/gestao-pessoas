@@ -30,6 +30,7 @@ class EmployeeApiIntegrationTest {
     }
 
     @AfterEach void cleanup() {
+        jdbc.update("delete from outbox_events where employee_id in (select id from employees where email = ?)", email);
         jdbc.update("delete from employees where email = ?", email);
         jdbc.update("delete from positions where id = ?", position);
         jdbc.update("delete from departments where id = ?", department);
@@ -49,6 +50,7 @@ class EmployeeApiIntegrationTest {
         assertEquals("ACTIVE", jdbc.queryForObject("select status from employees where id = ?", String.class, id));
         assertEquals(email, jdbc.queryForObject("select email from employees where id = ?", String.class, id));
         assertTrue(response.body().contains("\"createdAt\""));
+        assertEquals(1, jdbc.queryForObject("select count(*) from outbox_events where employee_id = ?", Integer.class, id));
         var duplicate = post(email, department, position);
         assertEquals(409, duplicate.statusCode());
         assertTrue(duplicate.body().contains("EMAIL_ALREADY_EXISTS"));
