@@ -10,12 +10,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.jdbc.core.JdbcTemplate;
+import tools.jackson.databind.json.JsonMapper;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class OrganizationApiIntegrationTest {
     @LocalServerPort int port;
     @Autowired JdbcTemplate jdbc;
+    @Autowired JsonMapper json;
 
     private HttpResponse<String> post(String path, String body) throws Exception {
         var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
@@ -28,11 +30,19 @@ class OrganizationApiIntegrationTest {
         assertEquals(201, department.statusCode());
         UUID departmentId = UUID.fromString(department.headers().firstValue("Location").orElseThrow().replace("/departments/", ""));
         try {
+            var departmentBody = json.readTree(department.body());
+            assertEquals(departmentId.toString(), departmentBody.get("id").asText());
+            assertEquals("RH", departmentBody.get("name").asText());
+            assertEquals("CC-01", departmentBody.get("costCenterCode").asText());
             assertEquals("RH", jdbc.queryForObject("select name from departments where id = ?", String.class, departmentId));
             var position = post("/positions", "{\"title\":\"Engenheiro\",\"level\":\"Sênior\"}");
             assertEquals(201, position.statusCode());
             UUID positionId = UUID.fromString(position.headers().firstValue("Location").orElseThrow().replace("/positions/", ""));
             try {
+                var positionBody = json.readTree(position.body());
+                assertEquals(positionId.toString(), positionBody.get("id").asText());
+                assertEquals("Engenheiro", positionBody.get("title").asText());
+                assertEquals("Sênior", positionBody.get("level").asText());
                 assertEquals("Sênior", jdbc.queryForObject("select level from positions where id = ?", String.class, positionId));
             } finally {
                 jdbc.update("delete from positions where id = ?", positionId);
