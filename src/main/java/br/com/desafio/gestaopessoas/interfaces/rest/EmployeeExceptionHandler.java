@@ -1,6 +1,7 @@
 package br.com.desafio.gestaopessoas.interfaces.rest;
 
 import br.com.desafio.gestaopessoas.domain.employee.EmployeeRegistrationException;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Locale;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -11,7 +12,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(assignableTypes = EmployeeController.class)
 public class EmployeeExceptionHandler {
-    record ErrorResponse(String code, String message) {}
+    @Schema(name = "ApiError", description = "Erro tratado pela API, com código estável e mensagem.")
+    record ErrorResponse(@Schema(requiredMode = Schema.RequiredMode.REQUIRED, example = "EMAIL_ALREADY_EXISTS") String code,
+                         @Schema(requiredMode = Schema.RequiredMode.REQUIRED, example = "E-mail já cadastrado") String message) {}
 
     @ExceptionHandler(EmployeeRegistrationException.class)
     ResponseEntity<ErrorResponse> registrationError(EmployeeRegistrationException exception) {
