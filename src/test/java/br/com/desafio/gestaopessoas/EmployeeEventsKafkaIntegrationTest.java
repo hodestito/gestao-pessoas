@@ -13,6 +13,7 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.boot.test.context.SpringBootTest;
+import br.com.desafio.gestaopessoas.support.WithIntegrationContainers;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.*;
 
 @EnabledIfSystemProperty(named = "kafka.tests", matches = "true")
 @ActiveProfiles("kafka")
+@WithIntegrationContainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = "app.outbox.scheduling-enabled=false")
 class EmployeeEventsKafkaIntegrationTest {
@@ -45,7 +47,7 @@ class EmployeeEventsKafkaIntegrationTest {
     @Autowired KafkaTemplate<String, String> kafka;
     @Autowired JsonMapper json;
     @MockitoSpyBean EmployeeHistoryWriter history;
-    @Value("${spring.kafka.bootstrap-servers}") String bootstrap;
+    @Autowired org.springframework.kafka.core.KafkaAdmin kafkaAdmin;
     private final UUID department = UUID.randomUUID();
     private final UUID position = UUID.randomUUID();
 
@@ -136,7 +138,7 @@ class EmployeeEventsKafkaIntegrationTest {
     private void assertDuplicateIsAcknowledgedWithoutAnotherHistory(String topic, UUID employeeId, UUID eventId, String payload) throws Exception {
         // Reenvio do mesmo evento como se o processo tivesse parado antes da marcação.
         var metadata = kafka.send(topic, employeeId.toString(), payload).get(15, TimeUnit.SECONDS).getRecordMetadata();
-        try (var admin = AdminClient.create(Map.of("bootstrap.servers", bootstrap))) {
+        try (var admin = AdminClient.create(kafkaAdmin.getConfigurationProperties())) {
             await(() -> {
                 try {
                     var offsets = admin.listConsumerGroupOffsets(GROUP).partitionsToOffsetAndMetadata().get(2, TimeUnit.SECONDS);

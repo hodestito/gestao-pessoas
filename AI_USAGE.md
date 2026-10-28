@@ -81,6 +81,16 @@
 
 **Validação:** a primeira execução no GitHub Actions (40707903180, revisão 74d3d9c) passou. A IA baixou os artefatos e conferiu 87 testes sem falhas, erros ou ignorados, cobertura de 99,07% de linhas/95,69% de ramos e construção Docker concluída. A evidência identifica a revisão executada; alterações posteriores são acompanhadas pelo status do PR.
 
+### Testcontainers
+
+**Instrução:** “Ainda precisamos incluir o testcontainer”.
+
+**Resultado:** a IA apresentou as alternativas de containers obrigatórios, perfil optativo e duplicação de suítes. Implementou um perfil Maven testcontainers que reutiliza os testes existentes com PostgreSQL/Kafka descartáveis e mantém H2 no modo padrão. A configuração usa beans de teste com @ServiceConnection; as versões são gerenciadas pelo Spring Boot.
+
+**Ajuste identificado:** a verificação de offsets Kafka lia uma propriedade textual que poderia continuar apontando para localhost:9092 após a conexão dinâmica. O teste passou a usar os dados efetivos de KafkaAdmin. A CI passou a executar o mesmo perfil, removendo a preparação manual de banco e broker. Nenhuma classe de produção foi alterada.
+
+**Validação e limites:** a execução local completa passou com os mesmos 87 testes, zero falhas, erros ou ignorados e cobertura de 99,07%/95,69%. Foram observados containers/portas dinâmicos e sua remoção ao final. O isolamento é por contexto Spring, com reaproveitamento pelo cache e limpeza de fixtures; não é por método. A decisão 014 distingue o resultado local do acompanhamento remoto no PR.
+
 ## Decisões influenciadas por IA e revisão técnica
 
 1. **Domínio e arquitetura:** a IA propôs uma organização em camadas e a separação do domínio de frameworks. O modelo foi revisto com o responsável técnico; os limites e as decisões permanecem documentados em `docs/decisions/`.
@@ -101,7 +111,7 @@
 - A primeira proposta de eventos usava Spring Events para reduzir complexidade, embora o enunciado prefira Kafka. Após questionamento e comparação das alternativas, o responsável técnico escolheu Kafka.
 - A normalização de e-mail, isoladamente, não garante unicidade sob concorrência. Foi adicionada uma restrição no banco e testes de concorrência e duplicidade, inclusive para colaboradores inativos.
 - O escape dos caracteres do `LIKE` não protege sozinho contra SQL injection. A consulta usa parâmetros e foram adicionados testes com entrada maliciosa e inspeção do SQL gerado; isso não constitui uma auditoria de segurança completa.
-- Os testes de PostgreSQL dependem de uma instância local já disponível. Eles exercitam um banco real, mas não são isolados por Testcontainers; a adoção de contêineres descartáveis permanece para decisão.
+- Inicialmente, os testes PostgreSQL dependiam de uma instância local já disponível. Após o adiamento inicial e a solicitação posterior do responsável técnico, o perfil testcontainers passou a criar PostgreSQL/Kafka descartáveis. O modo padrão com H2 foi preservado; detalhes e limites estão na decisão 014.
 - A proposta inicial AFTER_COMMIT mantinha uma janela de perda após confirmar o cadastro. A Outbox resolve a gravação atômica de empregado e intenção, mas permite reenvios. Foram acrescentados testes de rollback conjunto, falha na publicação e na marcação, consumidor com falha transitória e duplicatas com Kafka real. PostgreSQL usa uma base exclusiva de testes; H2 em memória não representa durabilidade após reinício.
 
 ## Versionamento

@@ -1,6 +1,6 @@
 # Gestão de pessoas — desafio técnico
 
-Projeto em construção para o desafio técnico. Os seis endpoints, os eventos com Outbox/Kafka, a política de admissão, a revisão de paginação/identidade, a cobertura, a documentação OpenAPI e a execução Docker/Compose estão integrados à main. Esta branch acrescenta integração contínua com GitHub Actions, para revisão.
+Projeto em construção para o desafio técnico. Os seis endpoints, os eventos com Outbox/Kafka, a política de admissão, a revisão de paginação/identidade, a cobertura, a documentação OpenAPI, Docker/Compose e CI estão integrados à main. Esta branch acrescenta Testcontainers aos testes e à CI, para revisão.
 
 Employee contempla criação ativa, e-mail normalizado e inativação no domínio. Cadastro e inativação persistem empregado e seu evento na mesma transação. A inativação preserva o registro, usa controle otimista de versão e só registra evento se houver mudança efetiva.
 
@@ -21,6 +21,7 @@ Employee contempla criação ativa, e-mail normalizado e inativação no domíni
 - [Decisão 011](docs/decisions/011-openapi-swagger.md): documentação HTTP, alternativas e limites do contrato gerado.
 - [Decisão 012](docs/decisions/012-docker-compose.md): imagem da aplicação, rede, inicialização e validação do Compose.
 - [Decisão 013](docs/decisions/013-integracao-continua.md): workflow, ambiente de testes, artefatos e limites da automação.
+- [Decisão 014](docs/decisions/014-testcontainers.md): serviços descartáveis de teste, conexões dinâmicas e ciclo de vida.
 - [Uso de IA](AI_USAGE.md): participação da IA e padrão dos commits identificados com `[IA]`.
 
 Os documentos distinguem requisitos do enunciado, definições do candidato, propostas e comportamento implementado. O Git registra a evolução real; os documentos apresentam o entendimento atual. A arquitetura detalhada e outros registros de decisão serão acrescentados conforme discutirmos essas decisões.
@@ -157,45 +158,35 @@ O desenho mantém uma conexão e um bloqueio de linha durante cada envio, com es
 
 ## Testes de Outbox e Kafka
 
-`./mvnw test` executa a suíte sem exigir Kafka; o teste do broker real fica explicitamente ignorado. Para incluir esse teste com H2:
+`./mvnw test` preserva o modo sem Docker: usa H2 e ignora explicitamente os dois testes com broker real. Testes unitários de mensageria e testes da Outbox continuam executando.
+
+Para a suíte completa, basta ter um runtime Docker acessível e executar:
 
 ```sh
-docker compose up -d --wait kafka
-./mvnw test -Dkafka.tests=true
+./mvnw -Ptestcontainers clean verify
 ```
 
-Para validar também PostgreSQL, crie uma base exclusiva de testes (comando de criação executado apenas uma vez):
+O perfil Maven habilita integration.containers e kafka.tests na JVM de testes. Testcontainers 2.0.5, gerenciado pelo Spring Boot, cria PostgreSQL 16 e Kafka 4.1.0 em portas livres; não é necessário subir Compose, criar banco ou informar URL/senha. O primeiro uso pode baixar imagens e precisa de internet. Sem Docker acessível, o modo completo falha; não ignora silenciosamente a integração.
 
-```sh
-docker compose up -d --wait postgres kafka
-docker compose exec -T postgres createdb -U gestao gestao_pessoas_test
-./mvnw test -Dkafka.tests=true -Dspring.profiles.active=postgres \
-  -Dspring.datasource.url=jdbc:postgresql://localhost:5432/gestao_pessoas_test \
-  -Dspring.datasource.username=gestao -Dspring.datasource.password=gestao_local
-```
+IntegrationContainersConfiguration é exclusiva de testes. @ServiceConnection fornece JDBC/Flyway/Kafka ao Spring, sobrescrevendo endereços externos. Cada contexto Spring recebe seu PostgreSQL; contextos reaproveitados pelo cache compartilham o mesmo container, e as fixtures continuam responsáveis por remover seus registros. Apenas o contexto com perfil Spring kafka cria o broker. Os containers são encerrados pelo ciclo de vida do contexto e removidos pelo mecanismo de limpeza do Testcontainers; não usam os volumes ou portas fixas do Compose de desenvolvimento.
 
-O teste Kafka cria e remove seus próprios tópicos e grupo. Verifica criação, inativação repetida, consumo em ordem inversa, falhas transitórias e duplicatas com confirmação de offset. O agendamento é desabilitado nos testes controlados de falhas; o publicador é chamado explicitamente e os consumidores são reais. Não use uma base de produção ou com outros publicadores ativos. Testcontainers permanece adiado por decisão do responsável técnico.
+O perfil Maven testcontainers configura a execução dos testes; não é um perfil Spring da aplicação. A execução normal continua usando H2 por padrão e PostgreSQL/Kafka quando selecionados pelos perfis já documentados.
+
+Os testes Kafka verificam criação, inativação repetida, consumo em ordem inversa, falhas transitórias e duplicatas com confirmação de offset. O agendamento é desabilitado nos testes controlados de falhas; o publicador é chamado explicitamente e os consumidores são reais. Eles consultam a configuração efetiva do KafkaAdmin, sem presumir porta 9092.
+
+O modo anterior com serviços externos continua possível ao omitir -Ptestcontainers e informar kafka.tests, perfil postgres e datasource de uma base exclusiva. A CI e a reprodução recomendada agora usam containers descartáveis.
 
 ## Cobertura de testes
 
-JaCoCo 0.8.16 acompanha a execução na JVM de testes e gera relatórios no verify. Para reproduzir a medição completa com H2 e Kafka real:
+JaCoCo 0.8.16 acompanha a execução na JVM de testes e gera relatórios no verify. Para reproduzir a medição completa com PostgreSQL e Kafka reais e descartáveis:
 
 ```sh
-docker compose up -d --wait kafka
-./mvnw clean verify -Dkafka.tests=true
-```
-
-Com o banco PostgreSQL exclusivo já criado na seção anterior:
-
-```sh
-./mvnw clean verify -Dkafka.tests=true -Dspring.profiles.active=postgres \
-  -Dspring.datasource.url=jdbc:postgresql://localhost:5432/gestao_pessoas_test \
-  -Dspring.datasource.username=gestao -Dspring.datasource.password=gestao_local
+./mvnw -Ptestcontainers clean verify
 ```
 
 O relatório HTML fica em target/site/jacoco/index.html; o XML, em target/site/jacoco/jacoco.xml; os dados de execução, em target/jacoco.exec. No Mac, abra o HTML com `open target/site/jacoco/index.html`. target/ é gerado localmente e não é versionado. Cada execução substitui os dados anteriores; clean remove relatórios antigos. Executar apenas test não atualiza o HTML/XML, pois o relatório está ligado ao verify.
 
-Medição de 28/10/2026, incluindo a documentação OpenAPI, com 87 testes sem falhas ou ignorados em cada banco, incluindo Kafka real:
+Medição de 28/10/2026, confirmada também com Testcontainers/PostgreSQL/Kafka, com 87 testes sem falhas ou ignorados:
 
 | Escopo | Linhas | Ramos |
 |---|---:|---:|
@@ -205,27 +196,27 @@ Medição de 28/10/2026, incluindo a documentação OpenAPI, com 87 testes sem f
 | Infraestrutura | 99,12% (225/227) | 96,55% (28/29) |
 | Interfaces | 100% (48/48) | 100% (15/15) |
 
-Os números foram iguais no H2 e no PostgreSQL, em execuções separadas, sem somar seus dados. O relatório inclui todas as classes de produção analisáveis, sem exclusões manuais. A medição inicial, com 74 testes, era de 94,90% de linhas e 81,03% de ramos.
+Os números foram iguais nas execuções anteriores com H2/Kafka e PostgreSQL/Kafka externos e na execução com Testcontainers, sem somar seus dados. O relatório inclui todas as classes de produção analisáveis, sem exclusões manuais. A medição inicial, com 74 testes, era de 94,90% de linhas e 81,03% de ramos.
 
 Os testes adicionais verificam listagem HTTP sem filtros/nome em branco, contratos Kafka inválidos sem escrita de histórico, tipo desconhecido sem envio ao tópico errado, processamento do lote após um evento adiado, interrupção do poller e tradução de falhas conhecidas/desconhecidas da persistência. Os quatro testes de OpenAPI conferem o contrato gerado, referências, paginação, erros e recursos locais da UI. A medição histórica do PR #8 permanece na decisão 010.
 
-Cobertura mostra código executado, não comprova todas as regras, concorrências ou falhas de infraestrutura. A meta sugerida de 80% serve como referência; não há gate percentual automático configurado. Sem -Dkafka.tests=true, os dois testes Kafka reais ficam ignorados e os percentuais podem mudar. As lacunas e limites estão na decisão 010.
+Cobertura mostra código executado, não comprova todas as regras, concorrências ou falhas de infraestrutura. A meta sugerida de 80% serve como referência; não há gate percentual automático configurado. Sem o perfil testcontainers ou a propriedade kafka.tests, os dois testes Kafka reais ficam ignorados e os percentuais podem mudar. As lacunas e limites estão na decisão 010.
 
 ## Integração contínua
 
-O workflow [CI](.github/workflows/ci.yml) executa em PRs destinados à main e em pushes na main. Um runner Ubuntu 24.04 configura Temurin 21 e cache Maven, inicia PostgreSQL/Kafka pelo Compose e cria gestao_pessoas_test, uma base exclusiva daquela execução. A aplicação do Compose não é iniciada durante os testes; os testes controlam suas próprias instâncias e tópicos.
+O workflow [CI](.github/workflows/ci.yml) executa em PRs destinados à main e em pushes na main. Um runner Ubuntu 24.04 configura Temurin 21 e cache Maven; a suíte inicia PostgreSQL/Kafka com Testcontainers em portas dinâmicas. O Compose permanece usado para construir a imagem da aplicação.
 
-O Maven Wrapper executa clean verify com o perfil postgres e -Dkafka.tests=true, incluindo os dois testes de broker real. Depois dos testes, o workflow constrói a imagem Docker. Falhas nos testes ou na construção reprovam o job. A cobertura é medida pelo JaCoCo; não há bloqueio por percentual mínimo.
+O Maven Wrapper executa -Ptestcontainers clean verify, incluindo os dois testes de broker real. Depois dos testes, o workflow constrói a imagem Docker. Falhas nos testes ou na construção reprovam o job. A cobertura é medida pelo JaCoCo; não há bloqueio por percentual mínimo.
 
-Na aba Actions do repositório, abra a execução CI para consultar etapas e resultados. O artefato verificacao-java-postgres-kafka contém relatórios Surefire, cobertura HTML/XML/CSV e logs dos serviços, retidos por sete dias. Após baixar e extrair, abra target/site/jacoco/index.html. Relatórios de cobertura só existirão se o Maven alcançar a fase verify.
+Na aba Actions do repositório, abra a execução CI para consultar etapas e resultados. O artefato verificacao-java-postgres-kafka contém relatórios Surefire (incluindo saída dos testes) e cobertura HTML/XML/CSV, retidos por sete dias. Após baixar e extrair, abra site/jacoco/index.html; como os caminhos publicados estão sob target/, esse prefixo pode ser removido do arquivo extraído. Relatórios de cobertura só existirão se o Maven alcançar a fase verify.
 
-Os serviços e volumes do runner são descartados ao final, inclusive em falhas normais. Uma nova atualização do mesmo PR cancela a execução anterior para evitar validar uma revisão ultrapassada. O workflow solicita apenas leitura do conteúdo e fixa as actions por SHA. Não exige secrets de infraestrutura nem publica imagem em registry. O status do workflow informa o resultado; impedir merges com falha exige configurar proteção da branch separadamente, o que não foi alterado neste incremento.
+Os serviços são descartados por Testcontainers ao final. Uma nova atualização do mesmo PR cancela a execução anterior para evitar validar uma revisão ultrapassada. O workflow solicita apenas leitura do conteúdo e fixa as actions por SHA. Não exige secrets de infraestrutura nem publica imagem em registry. O status do workflow informa o resultado; impedir merges com falha exige configurar proteção da branch separadamente, o que não foi alterado neste incremento.
 
 A [primeira execução no GitHub Actions](https://github.com/hodestito/gestao-pessoas/actions/runs/40707903180), revisão 74d3d9c, passou com 87 testes, zero falhas, erros ou ignorados, e construção Docker concluída. Os relatórios baixados do runner registraram 99,07% de linhas (426/430) e 95,69% de ramos (111/116), iguais à medição local. Consulte o status do PR para o resultado da revisão mais recente.
 
 ## Próximos incrementos
 
-1. Revisar e integrar CI após aprovação do responsável técnico.
+1. Revisar e integrar Testcontainers após aprovação do responsável técnico.
 2. Consolidar documentação, revisão final e defesa técnica; avaliar melhorias operacionais conforme o prazo.
 
 A revisão final e a consolidação da entrega continuam pendentes.

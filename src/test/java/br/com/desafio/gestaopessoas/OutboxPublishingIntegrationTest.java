@@ -9,12 +9,14 @@ import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import br.com.desafio.gestaopessoas.support.WithIntegrationContainers;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@WithIntegrationContainers
 @SpringBootTest(properties = {
         "app.messaging.enabled=true", "app.outbox.scheduling-enabled=false",
         "spring.kafka.listener.auto-startup=false", "spring.kafka.admin.auto-create=false"
