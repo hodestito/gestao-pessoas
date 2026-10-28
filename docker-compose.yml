@@ -1,4 +1,22 @@
 services:
+  app:
+    build:
+      context: .
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres,kafka
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/gestao_pessoas
+      SPRING_DATASOURCE_USERNAME: gestao
+      SPRING_DATASOURCE_PASSWORD: gestao_local
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    stop_grace_period: 30s
+
   postgres:
     image: postgres:16
     environment:
@@ -6,7 +24,7 @@ services:
       POSTGRES_USER: gestao
       POSTGRES_PASSWORD: gestao_local
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -18,12 +36,12 @@ services:
   kafka:
     image: apache/kafka:4.1.0
     ports:
-      - "127.0.0.1:9092:9092"
+      - "127.0.0.1:${KAFKA_HOST_PORT:-9092}:9092"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: HOST://:9092,INTERNAL://:19092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: HOST://localhost:9092,INTERNAL://kafka:19092
+      KAFKA_ADVERTISED_LISTENERS: HOST://localhost:${KAFKA_HOST_PORT:-9092},INTERNAL://kafka:19092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: HOST:PLAINTEXT,INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
@@ -36,7 +54,7 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:19092 --list >/dev/null 2>&1"]
       interval: 10s
       timeout: 10s
       retries: 12

@@ -63,6 +63,14 @@
 
 **Revisão e validação:** respostas HTTP reais foram inspecionadas antes da documentação para preservar os dois formatos de erro existentes. Os testes verificam o documento gerado, referências, paginação, códigos de resposta e recursos locais da UI. Um teste detectou a ausência dos padrões de paginação no Schema; a descrição foi corrigida sem alterar a API. A decisão 011 registra alternativas, limites e resultados.
 
+### Execução com Docker e Compose
+
+**Instrução:** “Validado. Vamos seguir com dockerfile e compose”. A documentação OpenAPI foi integrada pelo PR #9 após a validação do responsável técnico.
+
+**Resultado:** após apresentar o plano, a IA criou Dockerfile com etapas JDK/JRE 21, Maven Wrapper e usuário sem privilégios, restringiu o contexto com .dockerignore e acrescentou app ao Compose existente. As conexões usam nomes dos serviços, com healthchecks de inicialização e portas externas configuráveis. Não foram alteradas classes Java.
+
+**Decisões e limites:** foram comparados build dentro do Docker e cópia de JAR previamente compilado. O empacotamento da imagem ignora execução de testes; a validação usa a suíte separada e o fluxo HTTP/Kafka no ambiente final. A checagem Kafka usa o listener interno, pois a porta publicada no Mac pode mudar. A validação usa projeto Compose, portas e volumes próprios, preservando os dados de desenvolvimento. A decisão 012 registra comandos, alternativas e resultados reais.
+
 ## Decisões influenciadas por IA e revisão técnica
 
 1. **Domínio e arquitetura:** a IA propôs uma organização em camadas e a separação do domínio de frameworks. O modelo foi revisto com o responsável técnico; os limites e as decisões permanecem documentados em `docs/decisions/`.
