@@ -12,12 +12,14 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import br.com.desafio.gestaopessoas.support.WithIntegrationContainers;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import tools.jackson.databind.json.JsonMapper;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@WithIntegrationContainers
 @SpringBootTest
 class EmployeeStatusOutboxIntegrationTest {
     @Autowired EmployeeDeactivation deactivation;
