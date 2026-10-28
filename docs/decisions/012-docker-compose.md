@@ -1,6 +1,6 @@
 # 012 — Aplicação em Docker e ambiente Compose
 
-Estado: implementado em feature/docker-compose, aguardando revisão e aprovação de merge. Data: 28/10/2026. O PR #9 foi integrado após validação do responsável técnico.
+Estado: integrado à main pelo PR #10 após aprovação do responsável técnico. Data: 28/10/2026. O PR #9 foi integrado após validação do responsável técnico.
 
 ## Objetivo e arquivos
 

@@ -1,6 +1,6 @@
 # Gestão de pessoas — desafio técnico
 
-Projeto em construção para o desafio técnico. Os seis endpoints, os eventos com Outbox/Kafka, a política de admissão, a revisão de paginação/identidade, a cobertura e a documentação OpenAPI estão integrados à main. Esta branch acrescenta a execução completa com Docker/Compose, para revisão.
+Projeto em construção para o desafio técnico. Os seis endpoints, os eventos com Outbox/Kafka, a política de admissão, a revisão de paginação/identidade, a cobertura, a documentação OpenAPI e a execução Docker/Compose estão integrados à main. Esta branch acrescenta integração contínua com GitHub Actions, para revisão.
 
 Employee contempla criação ativa, e-mail normalizado e inativação no domínio. Cadastro e inativação persistem empregado e seu evento na mesma transação. A inativação preserva o registro, usa controle otimista de versão e só registra evento se houver mudança efetiva.
 
@@ -20,6 +20,7 @@ Employee contempla criação ativa, e-mail normalizado e inativação no domíni
 - [Decisão 010](docs/decisions/010-cobertura-e-caminhos-criticos.md): medição de cobertura, lacunas priorizadas e resultados.
 - [Decisão 011](docs/decisions/011-openapi-swagger.md): documentação HTTP, alternativas e limites do contrato gerado.
 - [Decisão 012](docs/decisions/012-docker-compose.md): imagem da aplicação, rede, inicialização e validação do Compose.
+- [Decisão 013](docs/decisions/013-integracao-continua.md): workflow, ambiente de testes, artefatos e limites da automação.
 - [Uso de IA](AI_USAGE.md): participação da IA e padrão dos commits identificados com `[IA]`.
 
 Os documentos distinguem requisitos do enunciado, definições do candidato, propostas e comportamento implementado. O Git registra a evolução real; os documentos apresentam o entendimento atual. A arquitetura detalhada e outros registros de decisão serão acrescentados conforme discutirmos essas decisões.
@@ -210,9 +211,21 @@ Os testes adicionais verificam listagem HTTP sem filtros/nome em branco, contrat
 
 Cobertura mostra código executado, não comprova todas as regras, concorrências ou falhas de infraestrutura. A meta sugerida de 80% serve como referência; não há gate percentual automático configurado. Sem -Dkafka.tests=true, os dois testes Kafka reais ficam ignorados e os percentuais podem mudar. As lacunas e limites estão na decisão 010.
 
+## Integração contínua
+
+O workflow [CI](.github/workflows/ci.yml) executa em PRs destinados à main e em pushes na main. Um runner Ubuntu 24.04 configura Temurin 21 e cache Maven, inicia PostgreSQL/Kafka pelo Compose e cria gestao_pessoas_test, uma base exclusiva daquela execução. A aplicação do Compose não é iniciada durante os testes; os testes controlam suas próprias instâncias e tópicos.
+
+O Maven Wrapper executa clean verify com o perfil postgres e -Dkafka.tests=true, incluindo os dois testes de broker real. Depois dos testes, o workflow constrói a imagem Docker. Falhas nos testes ou na construção reprovam o job. A cobertura é medida pelo JaCoCo; não há bloqueio por percentual mínimo.
+
+Na aba Actions do repositório, abra a execução CI para consultar etapas e resultados. O artefato verificacao-java-postgres-kafka contém relatórios Surefire, cobertura HTML/XML/CSV e logs dos serviços, retidos por sete dias. Após baixar e extrair, abra target/site/jacoco/index.html. Relatórios de cobertura só existirão se o Maven alcançar a fase verify.
+
+Os serviços e volumes do runner são descartados ao final, inclusive em falhas normais. Uma nova atualização do mesmo PR cancela a execução anterior para evitar validar uma revisão ultrapassada. O workflow solicita apenas leitura do conteúdo e fixa as actions por SHA. Não exige secrets de infraestrutura nem publica imagem em registry. O status do workflow informa o resultado; impedir merges com falha exige configurar proteção da branch separadamente, o que não foi alterado neste incremento.
+
+A [primeira execução no GitHub Actions](https://github.com/hodestito/gestao-pessoas/actions/runs/40707903180), revisão 74d3d9c, passou com 87 testes, zero falhas, erros ou ignorados, e construção Docker concluída. Os relatórios baixados do runner registraram 99,07% de linhas (426/430) e 95,69% de ramos (111/116), iguais à medição local. Consulte o status do PR para o resultado da revisão mais recente.
+
 ## Próximos incrementos
 
-1. Revisar e integrar Dockerfile/Compose após aprovação do responsável técnico.
-2. Consolidar documentação, CI, revisão final e defesa técnica; avaliar melhorias operacionais conforme o prazo.
+1. Revisar e integrar CI após aprovação do responsável técnico.
+2. Consolidar documentação, revisão final e defesa técnica; avaliar melhorias operacionais conforme o prazo.
 
-CI e revisão final continuam pendentes.
+A revisão final e a consolidação da entrega continuam pendentes.
