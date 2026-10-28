@@ -7,6 +7,12 @@
 
 ## Prompts e interações efetivas
 
+### Cobertura e testes de falha
+
+**Instrução:** “Faça o merge e siga para o proximo passo.”
+
+**Resultado:** após integrar o PR #7, a IA seguiu a etapa de medir cobertura do plano aprovado. Configurou JaCoCo e analisou o relatório antes de escolher testes adicionais. A medição inicial já superava os 80% sugeridos; foram priorizadas falhas de contrato, roteamento, processamento do lote e tradução de integridade, sem modificar código funcional nem excluir classes do relatório.
+
 ### Independência do núcleo e identidade das entidades
 
 **Instrução:** “Quero deixar o dominio independente de Spring Data e deixar coerente as entidades Department e Position, identificadas por ID.”
@@ -59,6 +65,7 @@
 6. **Tópicos e contratos:** ao comparar um tópico comum com dois tópicos, o responsável técnico escolheu “Dois tópicos, preservando o atual”. A IA acrescentou employee-status-changed.v1 e manteve employee-created.v1, reutilizando Outbox e histórico. A ausência de ordem entre tópicos foi documentada e testada processando a inativação antes da criação.
 7. **Admissão no domínio:** o responsável técnico solicitou uma classe de serviço de domínio para as regras de departamento, cargo e e-mail. A IA implementou uma política independente de frameworks, uma porta de consulta e o adaptador JPA. CreateEmployee mantém a coordenação; o banco continua sendo a garantia final sob concorrência.
 8. **Identidade das entidades:** o responsável técnico solicitou igualdade por ID para Department/Position. A IA manteve atributos, validações e acessores, usando classes finais em coerência com Employee; objetos de valor continuam com igualdade por valor. Testes verificam atributos diferentes com o mesmo ID e atributos iguais com IDs diferentes.
+9. **Cobertura:** JaCoCo foi acrescentado ao build para medir linhas e ramos. Os testes novos foram escolhidos pela relevância dos fluxos de falha, não por uma meta de 100%. O resultado com H2/Kafka e PostgreSQL/Kafka foi documentado separadamente; o indicador não é apresentado como garantia de ausência de defeitos.
 
 ## Limitações e como foram tratadas
 
