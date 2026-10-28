@@ -87,6 +87,17 @@ class EmployeeListApiIntegrationTest {
         assertTrue(beyond.body().contains("\"totalPages\":2"));
     }
 
+    @Test void listsBothStatusesWithoutFiltersAndTreatsBlankNameAsAbsent() throws Exception {
+        for (String query : new String[]{"?size=100", "?name=%20%20&size=100"}) {
+            var response = get(query);
+            assertEquals(200, response.statusCode());
+            assertTrue(response.body().contains(first.toString()));
+            assertTrue(response.body().contains(second.toString()));
+            assertTrue(response.body().contains(third.toString()));
+            assertTrue(response.body().contains("\"page\":0"));
+        }
+    }
+
     @Test void filtersNameIgnoringCaseAndCombinesStatus() throws Exception {
         var response = get("?name=" + encode(marker.toLowerCase(java.util.Locale.ROOT) + " hugo") + "&status=INACTIVE");
         assertEquals(200, response.statusCode());

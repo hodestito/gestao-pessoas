@@ -1,6 +1,6 @@
 # 009 — Paginação própria e identidade das entidades
 
-Estado: mudanças solicitadas pelo responsável técnico, implementadas em refactor/core-pagination-and-identity e aguardando revisão. Data: 28/10/2026.
+Estado: aprovado pelo responsável técnico e integrado à main no PR #7. Data: 28/10/2026.
 
 ## Contexto e decisões
 
@@ -80,4 +80,4 @@ Os DTOs HTTP de departamento/cargo já eram separados do domínio. Continuam rec
 - Testes de paginação cobrem limites de construção direta, total vazio/exato/parcial, contagem extrema sem overflow, cópia imutável da lista, metadados inválidos e página além da última.
 - Integração HTTP mantém filtros, SQL parametrizado, ordenação e desempate, paginação, campos/totalizadores e JSONs de departamentos/cargos.
 - A suíte de eventos existente permanece cobrindo Outbox, rollback, publicação e consumo dos dois contratos Kafka, inclusive duplicatas e consumo em ordem inversa.
-- Não houve alteração de migração/esquema. Cobertura percentual ainda não foi medida; Testcontainers continua adiado.
+- Não houve alteração de migração/esquema. A medição de cobertura foi acrescentada no incremento da decisão 010; Testcontainers continua adiado.
