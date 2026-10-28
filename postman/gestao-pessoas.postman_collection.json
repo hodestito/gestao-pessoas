@@ -1,0 +1,843 @@
+{
+  "info": {
+    "_postman_id": "60b2ecab-509f-4eaf-9175-894a6852eb99",
+    "name": "Gestão de Pessoas — fluxo local",
+    "description": "Execute os 16 requests na ordem. O primeiro prepara dados novos; os cadastros salvam IDs automaticamente. Cada rodada cria um departamento, um cargo e um colaborador que termina INACTIVE. Os registros são preservados. baseUrl padrão: http://localhost:8080. Para demonstrar Kafka/histórico, use a aplicação com perfis postgres,kafka e as consultas SQL de docs/presentation.md; esta collection verifica o contrato HTTP, não o consumo Kafka.",
+    "schema": "https://schema.postman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "runToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "departmentName",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "employeeName",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "employeeEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "employeeEmailUpper",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "departmentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "positionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "employeeId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "missingDepartmentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "missingPositionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "missingEmployeeId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Preparar nova execução e verificar saúde",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  const token = pm.variables.replaceIn(\"{{$guid}}\");",
+              "  [\"departmentId\", \"positionId\", \"employeeId\"].forEach(key => pm.collectionVariables.unset(key));",
+              "  pm.collectionVariables.set(\"runToken\", token);",
+              "  pm.collectionVariables.set(\"departmentName\", \"RH Postman \" + token.slice(0, 8));",
+              "  pm.collectionVariables.set(\"employeeName\", \"Ana Postman \" + token.slice(0, 8));",
+              "  pm.collectionVariables.set(\"employeeEmail\", \"postman-\" + token + \"@example.com\");",
+              "  pm.collectionVariables.set(\"employeeEmailUpper\", pm.collectionVariables.get(\"employeeEmail\").toUpperCase());",
+              "  pm.collectionVariables.set(\"missingDepartmentId\", pm.variables.replaceIn(\"{{$guid}}\"));",
+              "  pm.collectionVariables.set(\"missingPositionId\", pm.variables.replaceIn(\"{{$guid}}\"));",
+              "  pm.collectionVariables.set(\"missingEmployeeId\", pm.variables.replaceIn(\"{{$guid}}\"));",
+              "})();"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "  pm.test(\"Aplicação UP\", function () { pm.expect(pm.response.json().status).to.eql(\"UP\"); });",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/actuator/health",
+        "description": "Inicia uma rodada com dados novos e limpa os IDs da rodada anterior. Execute primeiro. baseUrl é a única variável do environment."
+      },
+      "response": []
+    },
+    {
+      "name": "01 - Cadastrar departamento",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  if (!pm.collectionVariables.get(\"runToken\")) { throw new Error(\"Execute os cadastros anteriores: falta runToken.\"); }",
+              "})();"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+              "  const data = pm.response.json();",
+              "  pm.test(\"UUID gerado\", function () { pm.expect(data.id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i); });",
+              "  pm.test(\"Location do recurso\", function () { pm.expect(pm.response.headers.get(\"Location\")).to.eql(\"/departments/\" + data.id); });",
+              "  pm.test(\"Nome do departamento\", function () { pm.expect(data.name).to.eql(pm.collectionVariables.get(\"departmentName\")); });",
+              "  pm.collectionVariables.set(\"departmentId\", data.id);",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/departments",
+        "description": "Captura departmentId para os próximos cadastros.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{departmentName}}\",\n  \"costCenterCode\": \"CC-POSTMAN\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "02 - Cadastrar cargo",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  if (!pm.collectionVariables.get(\"runToken\")) { throw new Error(\"Execute os cadastros anteriores: falta runToken.\"); }",
+              "})();"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+              "  const data = pm.response.json();",
+              "  pm.test(\"UUID gerado\", function () { pm.expect(data.id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i); });",
+              "  pm.test(\"Location do recurso\", function () { pm.expect(pm.response.headers.get(\"Location\")).to.eql(\"/positions/\" + data.id); });",
+              "  pm.test(\"Dados do cargo\", function () { pm.expect(data.title).to.eql(\"Engenheiro de Software\"); pm.expect(data.level).to.eql(\"Sênior\"); });",
+              "  pm.collectionVariables.set(\"positionId\", data.id);",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/positions",
+        "description": "Captura positionId.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Engenheiro de Software\",\n  \"level\": \"Sênior\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "03 - Cadastrar colaborador ativo",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  if (!pm.collectionVariables.get(\"departmentId\")) { throw new Error(\"Execute os cadastros anteriores: falta departmentId.\"); }",
+              "  if (!pm.collectionVariables.get(\"positionId\")) { throw new Error(\"Execute os cadastros anteriores: falta positionId.\"); }",
+              "})();"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+              "  const data = pm.response.json();",
+              "  pm.test(\"UUID gerado\", function () { pm.expect(data.id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i); });",
+              "  pm.test(\"Location do recurso\", function () { pm.expect(pm.response.headers.get(\"Location\")).to.eql(\"/employees/\" + data.id); });",
+              "  pm.test(\"Normalização e estado inicial\", function () { pm.expect(data.email).to.eql(pm.collectionVariables.get(\"employeeEmail\")); pm.expect(data.status).to.eql(\"ACTIVE\"); });",
+              "  pm.test(\"Referências e instante\", function () { pm.expect(data.departmentId).to.eql(pm.collectionVariables.get(\"departmentId\")); pm.expect(data.positionId).to.eql(pm.collectionVariables.get(\"positionId\")); pm.expect(Number.isNaN(Date.parse(data.createdAt))).to.eql(false); });",
+              "  pm.collectionVariables.set(\"employeeId\", data.id);",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/employees",
+        "description": "Envia e-mail em maiúsculas e com espaços externos. 201 confirma Employee e Outbox; Kafka/histórico continuam assíncronos.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{employeeName}}\",\n  \"email\": \" {{employeeEmailUpper}} \",\n  \"departmentId\": \"{{departmentId}}\",\n  \"positionId\": \"{{positionId}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "04 - Listar ativos por nome",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  if (!pm.collectionVariables.get(\"employeeId\")) { throw new Error(\"Execute os cadastros anteriores: falta employeeId.\"); }",
+              "})();"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "  const data = pm.response.json();",
+              "  pm.test(\"Formato da página\", function () {",
+              "    pm.expect(data).to.have.all.keys(\"content\", \"page\", \"size\", \"totalElements\", \"totalPages\");",
+              "    pm.expect(data.page).to.eql(0);",
+              "    pm.expect(data.size).to.eql(20);",
+              "    pm.expect(data.totalElements).to.be.at.least(1);",
+              "  });",
+              "  pm.test(\"Colaborador cadastrado na lista\", function () { pm.expect(data.content.some(e => e.id === pm.collectionVariables.get(\"employeeId\") && e.status === \"ACTIVE\")).to.eql(true); });",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/employees?name={{employeeName}}&status=ACTIVE&page=0&size=20",
+        "description": "Filtro parcial por nome e estado, página iniciada em zero."
+      },
+      "response": []
+    },
+    {
+      "name": "05 - Buscar por departamento",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  if (!pm.collectionVariables.get(\"employeeId\")) { throw new Error(\"Execute os cadastros anteriores: falta employeeId.\"); }",
+              "  if (!pm.collectionVariables.get(\"departmentName\")) { throw new Error(\"Execute os cadastros anteriores: falta departmentName.\"); }",
+              "})();"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "  const data = pm.response.json();",
+              "  pm.test(\"Formato da página\", function () {",
+              "    pm.expect(data).to.have.all.keys(\"content\", \"page\", \"size\", \"totalElements\", \"totalPages\");",
+              "    pm.expect(data.page).to.eql(0);",
+              "    pm.expect(data.size).to.eql(20);",
+              "    pm.expect(data.totalElements).to.be.at.least(1);",
+              "  });",
+              "  pm.test(\"Colaborador do departamento\", function () { pm.expect(data.content.some(e => e.id === pm.collectionVariables.get(\"employeeId\"))).to.eql(true); });",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/employees/search?department={{departmentName}}&page=0&size=20",
+        "description": "Nome exato sem diferenciar caixa. Pode incluir departamentos homônimos."
+      },
+      "response": []
+    },
+    {
+      "name": "06 - Rejeitar e-mail duplicado",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  if (!pm.collectionVariables.get(\"employeeId\")) { throw new Error(\"Execute os cadastros anteriores: falta employeeId.\"); }",
+              "})();"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+              "  pm.test(\"Código EMAIL_ALREADY_EXISTS\", function () { pm.expect(pm.response.json().code).to.eql(\"EMAIL_ALREADY_EXISTS\"); });",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/employees",
+        "description": "Mesmo endereço normalizado deve retornar 409.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{employeeName}}\",\n  \"email\": \" {{employeeEmailUpper}} \",\n  \"departmentId\": \"{{departmentId}}\",\n  \"positionId\": \"{{positionId}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "07 - Rejeitar departamento inexistente",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  if (!pm.collectionVariables.get(\"positionId\")) { throw new Error(\"Execute os cadastros anteriores: falta positionId.\"); }",
+              "  if (!pm.collectionVariables.get(\"missingDepartmentId\")) { throw new Error(\"Execute os cadastros anteriores: falta missingDepartmentId.\"); }",
+              "})();"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  pm.test(\"HTTP 422\", function () { pm.response.to.have.status(422); });",
+              "  pm.test(\"Código DEPARTMENT_NOT_FOUND\", function () { pm.expect(pm.response.json().code).to.eql(\"DEPARTMENT_NOT_FOUND\"); });",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/employees",
+        "description": "UUID válido gerado nesta rodada, sem departamento correspondente.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{employeeName}}\",\n  \"email\": \" {{employeeEmailUpper}} \",\n  \"departmentId\": \"{{missingDepartmentId}}\",\n  \"positionId\": \"{{positionId}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "08 - Rejeitar cargo inexistente",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  if (!pm.collectionVariables.get(\"departmentId\")) { throw new Error(\"Execute os cadastros anteriores: falta departmentId.\"); }",
+              "  if (!pm.collectionVariables.get(\"missingPositionId\")) { throw new Error(\"Execute os cadastros anteriores: falta missingPositionId.\"); }",
+              "})();"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  pm.test(\"HTTP 422\", function () { pm.response.to.have.status(422); });",
+              "  pm.test(\"Código POSITION_NOT_FOUND\", function () { pm.expect(pm.response.json().code).to.eql(\"POSITION_NOT_FOUND\"); });",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/employees",
+        "description": "Departamento existente e UUID de cargo não cadastrado. A política verifica referências antes do e-mail.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{employeeName}}\",\n  \"email\": \" {{employeeEmailUpper}} \",\n  \"departmentId\": \"{{departmentId}}\",\n  \"positionId\": \"{{missingPositionId}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "09 - Rejeitar paginação inválida",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+              "  pm.test(\"Código INVALID_INPUT\", function () { pm.expect(pm.response.json().code).to.eql(\"INVALID_INPUT\"); });",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/employees?page=-1&size=20",
+        "description": "Página negativa viola o contrato."
+      },
+      "response": []
+    },
+    {
+      "name": "10 - Inativação de ID inexistente",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  if (!pm.collectionVariables.get(\"missingEmployeeId\")) { throw new Error(\"Execute os cadastros anteriores: falta missingEmployeeId.\"); }",
+              "})();"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+              "  pm.test(\"Resposta vazia\", function () { pm.expect(pm.response.text()).to.eql(\"\"); });",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/employees/{{missingEmployeeId}}",
+        "description": "UUID não cadastrado retorna 404 sem corpo."
+      },
+      "response": []
+    },
+    {
+      "name": "11 - Inativar colaborador",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  if (!pm.collectionVariables.get(\"employeeId\")) { throw new Error(\"Execute os cadastros anteriores: falta employeeId.\"); }",
+              "})();"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  pm.test(\"HTTP 204\", function () { pm.response.to.have.status(204); });",
+              "  pm.test(\"Resposta vazia\", function () { pm.expect(pm.response.text()).to.eql(\"\"); });",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/employees/{{employeeId}}",
+        "description": "Preserva o cadastro e registra intenção de EmployeeStatusChangedEvent. 204 não confirma consumo do histórico."
+      },
+      "response": []
+    },
+    {
+      "name": "12 - Repetir inativação",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  if (!pm.collectionVariables.get(\"employeeId\")) { throw new Error(\"Execute os cadastros anteriores: falta employeeId.\"); }",
+              "})();"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  pm.test(\"HTTP 204\", function () { pm.response.to.have.status(204); });",
+              "  pm.test(\"Resposta vazia\", function () { pm.expect(pm.response.text()).to.eql(\"\"); });",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/employees/{{employeeId}}",
+        "description": "Repetição retorna 204 sem outro evento lógico. A ausência de evento adicional é verificada nos testes/consulta SQL, não apenas por este status HTTP."
+      },
+      "response": []
+    },
+    {
+      "name": "13 - Consultar colaborador inativo",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  if (!pm.collectionVariables.get(\"employeeId\")) { throw new Error(\"Execute os cadastros anteriores: falta employeeId.\"); }",
+              "})();"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "  const data = pm.response.json();",
+              "  pm.test(\"Formato da página\", function () {",
+              "    pm.expect(data).to.have.all.keys(\"content\", \"page\", \"size\", \"totalElements\", \"totalPages\");",
+              "    pm.expect(data.page).to.eql(0);",
+              "    pm.expect(data.size).to.eql(20);",
+              "    pm.expect(data.totalElements).to.be.at.least(1);",
+              "  });",
+              "  pm.test(\"Cadastro preservado em INACTIVE\", function () { pm.expect(data.content.some(e => e.id === pm.collectionVariables.get(\"employeeId\") && e.status === \"INACTIVE\")).to.eql(true); });",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/employees?name={{employeeName}}&status=INACTIVE&page=0&size=20",
+        "description": "Confere que o cadastro foi preservado e mudou de estado."
+      },
+      "response": []
+    },
+    {
+      "name": "14 - E-mail continua único após inativação",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  if (!pm.collectionVariables.get(\"employeeId\")) { throw new Error(\"Execute os cadastros anteriores: falta employeeId.\"); }",
+              "})();"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+              "  pm.test(\"Código EMAIL_ALREADY_EXISTS\", function () { pm.expect(pm.response.json().code).to.eql(\"EMAIL_ALREADY_EXISTS\"); });",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/employees",
+        "description": "Inativar não libera o e-mail para outro cadastro.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{employeeName}}\",\n  \"email\": \" {{employeeEmailUpper}} \",\n  \"departmentId\": \"{{departmentId}}\",\n  \"positionId\": \"{{positionId}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "15 - Busca por departamento inclui inativos",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  if (!pm.collectionVariables.get(\"employeeId\")) { throw new Error(\"Execute os cadastros anteriores: falta employeeId.\"); }",
+              "})();"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "  const data = pm.response.json();",
+              "  pm.test(\"Inativo incluído no departamento\", function () { pm.expect(data.content.some(e => e.id === pm.collectionVariables.get(\"employeeId\") && e.status === \"INACTIVE\")).to.eql(true); });",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/employees/search?department={{departmentName}}&page=0&size=20",
+        "description": "A busca não remove colaboradores inativos."
+      },
+      "response": []
+    }
+  ]
+}

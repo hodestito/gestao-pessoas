@@ -99,6 +99,14 @@
 
 **Revisão:** os textos distinguem commit de flush, controle otimista de bloqueio pessimista, confirmação da API de consumo do histórico e contratos Kafka de versão da API HTTP. A pendência de repositório público no enunciado versus privado por orientação do candidato ficou explícita, sem alterar visibilidade ou enviar mensagens à avaliadora. O incremento modifica apenas Markdown; a validação documental e o ensaio técnico são registrados no PR.
 
+### Collection Postman local
+
+**Instrução:** “Após a documentação, gere uma collection postman para executar os endpoints da aplicação localmente.”
+
+**Resultado:** a IA acrescentou uma collection v2.1 com os seis endpoints, health e cenários de erro/repetição, um environment com somente baseUrl e guia de importação/execução. Nomes/e-mail são gerados por rodada; os IDs retornados são capturados em variáveis da collection. A presença apenas de baseUrl no environment evita sobrescrever os IDs capturados com valores vazios.
+
+**Validação e ajuste:** o runner inicialmente apontou conflito de variáveis no sandbox; os scripts passaram a usar escopo próprio. A versão final foi validada contra o schema oficial e executada com Newman 6.2.3 em duas rodadas: 32 requests, 84 asserções, zero falhas. As ferramentas de validação ficaram em diretórios temporários, sem dependência Node no projeto. A collection verifica HTTP; não afirma entrega Kafka apenas com 201/204 nem foi validada visualmente no Postman Desktop.
+
 ## Decisões influenciadas por IA e revisão técnica
 
 1. **Domínio e arquitetura:** a IA propôs uma organização em camadas e a separação do domínio de frameworks. O modelo foi revisto com o responsável técnico; os limites e as decisões permanecem documentados em `docs/decisions/`.

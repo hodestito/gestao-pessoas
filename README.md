@@ -11,6 +11,7 @@ Os seis endpoints, eventos, persistência, documentação OpenAPI, Docker, CI e 
 | Entender camadas, dependências, transações e eventos | [Arquitetura](docs/architecture.md) |
 | Conhecer o modelo e as regras | [Domínio](docs/domain.md) e [casos de uso](docs/use-cases.md) |
 | Preparar demonstração e defesa técnica | [Roteiro de apresentação](docs/presentation.md) |
+| Executar endpoints com captura automática de IDs | [Collection Postman e environment local](postman/README.md) |
 | Conferir requisitos, evidências e pendências | [Checklist de entrega](docs/delivery.md) |
 | Consultar alternativas e evolução | [Índice das decisões](docs/decisions/README.md) |
 
@@ -93,6 +94,8 @@ curl -i -X DELETE 'http://localhost:8080/employees/UUID-RETORNADO-DO-COLABORADOR
 ```
 
 Substitua os três placeholders pelos UUIDs retornados. E-mail é normalizado e único inclusive para inativos. Entrada inválida retorna 400; e-mail duplicado, 409; departamento/cargo inexistente, 422; segundo conflito otimista na inativação, 409. Há dois formatos atuais de erro: `code/message` nas falhas tratadas e o formato padrão Spring nas demais; OpenAPI documenta essa diferença.
+
+Para executar sem copiar IDs manualmente, importe a [collection Postman](postman/gestao-pessoas.postman_collection.json) e o [environment local](postman/local.postman_environment.json). O [guia](postman/README.md) orienta a execução sequencial dos seis endpoints e cenários negativos, com nomes/e-mail novos a cada rodada.
 
 A página contém `content`, `page`, `size`, `totalElements` e `totalPages`. `page` começa em zero; `size` aceita 1–100, padrão 20. Ordenação crescente por `createdAt`, com `id` como desempate. A listagem inclui ativos/inativos quando `status` está ausente; `name` é parcial e trata %, _ e ! literalmente. A busca por departamento inclui todos os departamentos homônimos. Não há garantia de equivalência de acentos ou de estabilidade das páginas entre alterações dos dados.
 

@@ -37,6 +37,8 @@ Abra [Swagger UI da demonstração](http://localhost:18080/swagger-ui.html). Ant
 
 ## Demonstrar os seis endpoints
 
+Como alternativa aos comandos curl abaixo, use a [collection Postman](../postman/README.md). Ela captura IDs automaticamente e executa o fluxo em ordem; no environment local, ajuste baseUrl para http://localhost:18080 quando usar este ambiente de apresentação. A consulta SQL e a explicação das garantias assíncronas continuam necessárias para demonstrar histórico.
+
 ### 1. Cadastrar departamento e cargo
 
 ```sh

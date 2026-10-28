@@ -60,6 +60,8 @@ O roteiro foi ensaiado tecnicamente em projeto Compose separado, gestao-apresent
 
 Foram confirmados três serviços saudáveis, os seis endpoints, e-mail normalizado, erros 409/422, duas inativações com 204 e duas ocorrências no histórico. Os links locais e cercas de código Markdown foram verificados. O ensaio técnico não equivale a um ensaio humano de fala ou duração. O ambiente descartável foi removido depois da validação; os dados de desenvolvimento foram preservados.
 
+A [collection Postman](../postman/README.md) foi acrescentada depois, com environment local e captura de IDs. O schema oficial v2.1.0 foi verificado, e Newman 6.2.3 executou duas rodadas em outro ambiente isolado: 32 requests, 84 asserções e zero falhas. A collection valida HTTP e não substitui os testes Java/consulta de histórico.
+
 ## Antes de apresentar e enviar
 
 - [ ] Revisar e integrar o PR de consolidação documental após aprovação do candidato.
