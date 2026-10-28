@@ -8,7 +8,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -18,7 +18,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 class EmployeeOutboxIntegrationTest {
     @Autowired EmployeeRegistration registration;
-    @Autowired JdbcEmployeeEventOutbox outbox;
+    @Autowired JpaEmployeeEventOutbox outbox;
+    @jakarta.persistence.PersistenceContext jakarta.persistence.EntityManager entityManager;
     @Autowired EmployeeHistoryWriter history;
     @Autowired JdbcTemplate jdbc;
     @Autowired JsonMapper json;
@@ -55,11 +56,12 @@ class EmployeeOutboxIntegrationTest {
 
     @Test void databaseFailureAfterOutboxInsertRollsBackEmployeeAndOutboxTogether() {
         UUID[] created = new UUID[1];
-        assertThrows(DuplicateKeyException.class, () -> new TransactionTemplate(transactions).executeWithoutResult(tx -> {
+        assertThrows(DataIntegrityViolationException.class, () -> new TransactionTemplate(transactions).executeWithoutResult(tx -> {
             var employee = registration.execute("Teste", email, department, position);
             created[0] = employee.id();
             UUID eventId = jdbc.queryForObject("select event_id from outbox_events where employee_id=?", UUID.class, employee.id());
             // Força falha real no banco dentro da mesma transação, após os dois inserts.
+            entityManager.clear();
             outbox.append(new EmployeeCreatedEvent(eventId, employee.id(), employee.createdAt()));
         }));
         assertNotNull(created[0]);
@@ -79,7 +81,13 @@ class EmployeeOutboxIntegrationTest {
         var record = new ConsumerRecord<>("test", 0, 0, employee.id().toString(), payload);
         consumer.consume(record);
         consumer.consume(record);
+        var original = json.readValue(payload, EmployeeCreatedMessage.class);
+        var changed = new EmployeeCreatedMessage(1, original.eventType(), original.eventId(),
+                original.employeeId(), original.occurredAt().plusSeconds(10));
+        consumer.consume(new ConsumerRecord<>("test", 0, 2, employee.id().toString(), json.writeValueAsString(changed)));
         assertEquals(1, jdbc.queryForObject("select count(*) from employee_events where employee_id=?", Integer.class, employee.id()));
+        assertEquals(payload, jdbc.queryForObject("select payload from employee_events where employee_id=?", String.class, employee.id()),
+                "Um evento com id existente não pode sobrescrever o histórico via merge");
         assertThrows(IllegalArgumentException.class, () -> consumer.consume(new ConsumerRecord<>("test", 0, 1, "wrong", payload)));
     }
 }

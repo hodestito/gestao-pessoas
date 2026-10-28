@@ -1,6 +1,6 @@
 # 006 — Cadastro com Outbox e Kafka
 
-Estado: Outbox aprovada pelo responsável técnico; implementação em feature/employee-created-outbox aguardando revisão. Data: 27/10/2026.
+Estado: Outbox e uso uniforme de JPA aprovados pelo responsável técnico; implementação no PR #4 aguardando revisão e merge. Criado em 27/10/2026, revisado em 28/10/2026.
 
 ## Problema, alternativas e decisão
 
@@ -15,7 +15,7 @@ A alternativa CDC/Debezium reduz a necessidade de polling, mas adiciona infraest
 ```mermaid
 flowchart LR
     API[POST employees] --> Cadastro[CreateEmployee]
-    Cadastro --> TX["Mesma transação: JPA Employee + JDBC Outbox"]
+    Cadastro --> TX["Mesma transação JPA: Employee + Outbox"]
     TX --> DB[(PostgreSQL)]
     DB --> Poller["Polling de pendentes"]
     Poller --> Envio["Lock da linha + envio confirmado"]
@@ -27,11 +27,15 @@ flowchart LR
 
 CreateEmployee registra o fato depois de salvar o empregado; o Spring coordena a transação em TransactionalEmployeeRegistration. O domínio só conhece um record imutável EmployeeCreatedEvent. A aplicação usa EmployeeEventOutbox; não conhece Kafka, JSON ou tabelas da Outbox.
 
-JdbcEmployeeEventOutbox usa MANDATORY, em um bean separado interceptado pelo proxy Spring. Uma chamada sem transação falha. JpaTransactionManager e JdbcTemplate compartilham a conexão do mesmo DataSource; um erro desfaz empregado e Outbox. A migração V4 cria Outbox e histórico. JDBC foi escolhido para SQL explícito de polling e inserção do histórico; a persistência dos agregados continua em JPA.
+JpaEmployeeEventOutbox usa MANDATORY, em um bean separado interceptado pelo proxy Spring. Uma chamada sem transação falha. Employee e Outbox usam a mesma transação e contexto de persistência JPA; um erro desfaz ambos. A migração V4 cria Outbox e histórico, sem alteração de esquema nesta revisão.
+
+O responsável técnico escolheu JPA também para os registros de mensageria, substituindo a proposta inicial JDBC para uniformizar as escolhas e a explicação arquitetural. O custo é acrescentar duas entidades e dois repositórios JPA. JDBC permanece apenas nos testes, para preparar fixtures e verificar o banco independentemente dos mapeamentos da aplicação.
+
+OutboxEventEntity e EmployeeEventEntity implementam Persistable com uma flag transiente de nova instância e callbacks PostPersist/PostLoad. UUIDs são atribuídos pela aplicação: sem essa indicação, save poderia escolher merge e atualizar um evento existente. A inserção usa saveAndFlush para executar o INSERT antes de retornar; flush não é commit. O histórico é somente acrescentado, sem métodos de alteração.
 
 ## Publicação
 
-OutboxPoller, acionado por @Scheduled com fixedDelay de um segundo, seleciona até 20 identificadores disponíveis. Cada chamada ao bean OutboxPublishingTransaction usa REQUIRES_NEW: relê e bloqueia a linha com FOR UPDATE, revalida que está pendente/disponível, envia, aguarda confirmação e marca published_at.
+OutboxPoller, acionado por @Scheduled com fixedDelay de um segundo, seleciona até 20 identificadores disponíveis por JPQL e PageRequest, sem consulta de contagem. Cada chamada ao bean OutboxPublishingTransaction usa REQUIRES_NEW: relê a pendência com LockModeType.PESSIMISTIC_WRITE, envia, aguarda confirmação e altera a entidade gerenciada. Hibernate persiste published_at, attempts e last_error por dirty checking; flush explicita a tentativa de gravação antes do retorno. O banco mantém o bloqueio até o fim da transação.
 
 O envio usa KafkaTemplate com chave employeeId, valores JSON em String e acks=all. O producer tem idempotência habilitada; isso não deduplica reenvios feitos pela Outbox após reinício. max.block.ms=5000 limita a espera por metadados/buffer; delivery.timeout.ms=10000 e get de até 15 segundos limitam o envio. Esses limites não representam um SLA total da transação ou de indisponibilidade.
 
@@ -45,7 +49,7 @@ EmployeeCreatedMessage explicita schemaVersion=1, eventType=EmployeeCreatedEvent
 
 EmployeeCreatedKafkaConsumer chama EmployeeHistoryWriter, em outro bean com transação própria REQUIRES_NEW. O histórico usa event_id como chave primária e armazena tipo, empregado, instante de ocorrência, processamento e payload. Não possui FK para Employee: histórico e consumo não dependem da existência atual do agregado.
 
-Duplicatas falham na inserção protegida pela chave e são reconhecidas fora da transação que sofreu rollback. Não se captura a exceção dentro de uma transação abortada para tentar confirmá-la. O único índice único dessa tabela é event_id; ele identifica a mensagem lógica, preservada nos reenvios.
+Duplicatas falham na inserção protegida pela chave e são reconhecidas fora da transação que sofreu rollback. JPA traduz a falha em DataIntegrityViolationException: o consumidor verifica, em uma nova consulta após o rollback, se aquele eventId já existe. Se não existe, propaga o erro para retry em vez de ocultar outra falha de integridade. Não se captura a exceção dentro de uma transação abortada para tentar confirmá-la. O único índice único dessa tabela é event_id; ele identifica a mensagem lógica, preservada nos reenvios.
 
 O consumer tem enable-auto-commit=false e AckMode.RECORD. Somente após o método retornar com sucesso o container pode confirmar o offset. Erros de processamento são repetidos com intervalo de um segundo e sem descarte automático. Uma mensagem inválida bloqueia sua partição: DLQ, alertas e intervenção operacional continuam pendentes. A falha transitória em testes é injetada antes do insert; não se afirma que todos os tipos de falhas de banco foram simulados.
 
@@ -71,22 +75,25 @@ O consumer tem enable-auto-commit=false e AckMode.RECORD. Somente após o métod
 | Domínio | EmployeeCreatedEvent | Fato imutável independente de frameworks. |
 | Aplicação | EmployeeEventOutbox, CreateEmployee | Porta de gravação durável e coordenação do cadastro. |
 | Configuração | ApplicationConfig, KafkaMessagingConfig | Injeção da porta, tópico local, agendamento e política de falhas. |
-| Mensageria | EmployeeCreatedMessage, JdbcEmployeeEventOutbox | Contrato de transporte e gravação atômica. |
+| Mensageria | EmployeeCreatedMessage, JpaEmployeeEventOutbox | Contrato de transporte e gravação atômica. |
+| Persistência | OutboxEventEntity, OutboxEventJpaRepository, EmployeeEventEntity, EmployeeEventJpaRepository | Mapeamentos JPA, seleção JPQL, bloqueio e inserção de eventos. |
 | Publicação | OutboxPoller, OutboxPublishingTransaction, KafkaOutboxDelivery | Seleção, lock, envio confirmado e retry. |
 | Consumo | EmployeeCreatedKafkaConsumer, EmployeeHistoryWriter | Desserialização, histórico idempotente e logs. |
 | Infraestrutura | pom.xml, docker-compose.yml, application.properties, application-kafka.properties, V4 | Dependências, broker, perfis e tabelas. |
-| Testes | CreateEmployeeTest, EmployeeApiIntegrationTest, EmployeeOutboxIntegrationTest, OutboxPublishingIntegrationTest, EmployeeCreatedKafkaIntegrationTest | Regressão, atomicidade, falhas e fluxo com Kafka real. |
+| Testes | CreateEmployeeTest, EmployeeApiIntegrationTest, EmployeeOutboxIntegrationTest, OutboxPublishingIntegrationTest, EmployeeCreatedKafkaIntegrationTest, EmployeeCreatedKafkaConsumerTest | Regressão, atomicidade, bloqueio, integridade e fluxo com Kafka real. |
 | Documentação | README, AI_USAGE, domínio, casos de uso, ADRs 001, 002, 005 e 006 | Estado atual, decisões e uso da IA. |
 
 TransactionalEmployeeRegistration não precisou ser modificado: sua transação já envolve CreateEmployee inteiro, incluindo a nova chamada à Outbox.
 
 ## Verificação
 
-PostgreSQL 16.15 em base exclusiva gestao_outbox_tests_20261027_01 e Kafka 4.1.0 real: suíte com 54 testes, sem falhas, erros ou ignorados. A base de desenvolvimento gestao_pessoas não recebeu a V4 durante essa execução.
+Após a migração para JPA em 28/10/2026: PostgreSQL 16.15 em base exclusiva gestao_outbox_tests_20261027_01 e Kafka 4.1.0 real, suíte com 56 testes sem falhas, erros ou ignorados. A base de desenvolvimento gestao_pessoas não recebeu a V4 durante essa execução.
 
-Verificação final com H2 e Kafka real: `mvnw verify -Dkafka.tests=true`, 54 testes sem falhas, erros ou ignorados e jar executável gerado. Um smoke test separado iniciou esse jar com postgres,kafka e o agendamento habilitado: um cadastro HTTP produziu Outbox publicada e um registro no histórico, sem chamada manual ao publicador. As fixtures, tópico e grupo próprios foram removidos e o processo encerrado ao final.
+Verificação com H2 e Kafka real: `mvnw verify -Dkafka.tests=true`, 56 testes sem falhas, erros ou ignorados e jar executável gerado.
 
-Os testes verificam: cadastro com evento sem dados pessoais; erro real de chave duplicada após os inserts desfaz ambos; Outbox exige transação; falha de envio preserva pendência e respeita intervalo; falha simulada na marcação permite reenvio; consumidor grava apenas um histórico por evento. O teste Kafka usa POST HTTP real, força falha transitória no writer, espera o histórico e confirma o offset de uma duplicata antes de verificar a contagem.
+Smoke test do jar JPA com postgres,kafka e agendamento ativo: um cadastro HTTP produziu Outbox publicada e um histórico sem chamar manualmente o publicador. Fixtures, tópico e grupo próprios foram removidos e o processo encerrado ao final.
+
+Os testes verificam: cadastro com evento sem dados pessoais; erro real de chave duplicada após os inserts desfaz ambos; Outbox exige transação; falha de envio preserva pendência e respeita intervalo; falha simulada no flush após envio provoca rollback e permite reenvio; duas tentativas coordenadas da mesma linha produzem um único envio; consumidor grava apenas um histórico por evento, sem sobrescrever seu payload em uma duplicata; falha de integridade sem evento já gravado é propagada. O teste Kafka usa POST HTTP real, força falha transitória no writer, espera o histórico e confirma o offset de uma duplicata antes de verificar a contagem.
 
 O agendamento é desabilitado nos testes controlados: a transação de publicação é chamada explicitamente. Isso não é uma prova de recuperação por reinício real de processo nem de falhas de infraestrutura distribuída. Testcontainers foi adiado por decisão do responsável técnico.
 

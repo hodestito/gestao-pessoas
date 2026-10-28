@@ -4,7 +4,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
@@ -30,8 +30,9 @@ public class EmployeeCreatedKafkaConsumer {
         }
         try {
             history.record(event, record.value());
-        } catch (DuplicateKeyException duplicate) {
+        } catch (DataIntegrityViolationException failure) {
             // A transação do writer já sofreu rollback antes de chegar aqui.
+            if (!history.contains(event.eventId())) throw failure;
             log.info("employee_event_duplicate eventId={} offset={}", event.eventId(), record.offset());
             return;
         }

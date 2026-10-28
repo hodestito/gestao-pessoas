@@ -21,7 +21,7 @@ Os documentos distinguem requisitos do enunciado, definições do candidato, pro
 ## Base escolhida
 
 - Java 21 e Spring Boot 4.1.2
-- Maven Wrapper, Spring Web, JPA, JDBC para Outbox/histórico, Flyway, Kafka, validação, Actuator, H2 e driver PostgreSQL
+- Maven Wrapper, Spring Web, JPA para agregados, Outbox e histórico, Flyway, Kafka, validação, Actuator, H2 e driver PostgreSQL
 - H2 é o banco usado por padrão; PostgreSQL pode ser selecionado pelo perfil `postgres`. O Flyway cria as tabelas de departamentos, cargos e colaboradores.
 
 ## Primeiro incremento

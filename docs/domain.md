@@ -85,7 +85,7 @@ O limite de 120 caracteres para o nome de Employee foi aprovado pelo candidato. 
 
 ## Transações e eventos
 
-O candidato aprovou Kafka e posteriormente solicitou Outbox. No cadastro, a aplicação registra EmployeeCreatedEvent pela porta EmployeeEventOutbox, na mesma transação do empregado. Um publicador periódico envia ao Kafka após o commit; o consumidor grava o histórico de forma idempotente por eventId. A decisão 006 detalha classes, contrato, JDBC compartilhando a transação JPA, testes e limites. A inativação ainda precisa dessa integração.
+O candidato aprovou Kafka e posteriormente solicitou Outbox. No cadastro, a aplicação registra EmployeeCreatedEvent pela porta EmployeeEventOutbox, na mesma transação do empregado. Um publicador periódico envia ao Kafka após o commit; o consumidor grava o histórico de forma idempotente por eventId. O responsável técnico escolheu JPA para toda a persistência da aplicação. A decisão 006 detalha classes, contrato, transações, testes e limites. A inativação ainda precisa dessa integração.
 
 Kafka não torna a transação do banco e a publicação atômicas. Sem uma estratégia adicional, a aplicação pode confirmar o cadastro e falhar antes de publicar o evento. A Outbox permite registrar a intenção de publicação na mesma transação do colaborador, com mecanismo posterior de envio; também exige cuidados com duplicatas e operação. Não prometer exactly-once.
 
