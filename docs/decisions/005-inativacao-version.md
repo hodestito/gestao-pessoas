@@ -20,8 +20,8 @@ Atualização condicional `UPDATE ... WHERE status = 'ACTIVE'` poderia informar 
 
 O controle só protege operações que verifiquem e incrementem a versão. Escritas SQL externas que não respeitem o mecanismo podem contorná-lo. A releitura é limitada a uma tentativa; conflitos persistentes não são repetidos indefinidamente.
 
-Controle otimista não garante entrega ao Kafka nem a atomicidade entre banco e broker. A decisão 006 adota Outbox inicialmente para cadastro; a extensão de inativação está implementada para revisão e descrita na decisão 007.
+Controle otimista não garante entrega ao Kafka nem a atomicidade entre banco e broker. A decisão 006 adota Outbox inicialmente para cadastro; a extensão de inativação foi integrada e está descrita na decisão 007.
 
 ## Verificação
 
-A suíte completa passou com 44 testes em H2 e PostgreSQL 16 local. Depois foi acrescentado um teste de duas requisições HTTP concorrentes; os quatro testes de integração de inativação/concorrência foram repetidos nos dois bancos sem falhas. Um teste com duas transações coordenadas força ambas a lerem a mesma versão e verifica que a segunda gravação é rejeitada. O teste unitário do coordenador simula o conflito para verificar a releitura limitada; não força essa corrida através de uma chamada HTTP real. Testcontainers ainda não foi adotado.
+A suíte completa passou com 44 testes em H2 e PostgreSQL 16 local. Depois foi acrescentado um teste de duas requisições HTTP concorrentes; os quatro testes de integração de inativação/concorrência foram repetidos nos dois bancos sem falhas. Um teste com duas transações coordenadas força ambas a lerem a mesma versão e verifica que a segunda gravação é rejeitada. O teste unitário do coordenador simula o conflito para verificar a releitura limitada; não força essa corrida através de uma chamada HTTP real. Esta etapa original não usou Testcontainers; a adoção posterior está na [decisão 014](014-testcontainers.md).

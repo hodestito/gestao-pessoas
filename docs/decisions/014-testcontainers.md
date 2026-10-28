@@ -1,6 +1,6 @@
 # 014 — Testcontainers para PostgreSQL e Kafka
 
-Estado: implementado em test/testcontainers, validado localmente e aguardando revisão/aprovação de merge. Data: 28/10/2026. A adoção, antes adiada, foi solicitada pelo responsável técnico após a integração do PR #11.
+Estado: integrado à main pelo PR #12 após aprovação do responsável técnico, com validação local e remota. Data: 28/10/2026. A adoção, antes adiada, foi solicitada pelo responsável técnico após a integração do PR #11.
 
 ## Objetivo e alternativas
 
@@ -42,7 +42,7 @@ A construção da imagem continua depois do sucesso dos testes, usando o Compose
 
 ./mvnw -Ptestcontainers clean verify passou com 87 testes, zero falhas, erros ou ignorados. Os logs confirmaram sete PostgreSQL descartáveis para os contextos e um Kafka, além de Ryuk. As URLs JDBC usaram portas dinâmicas, por exemplo 60403 e 60440, e as quatro migrações foram aplicadas. Após a JVM de testes encerrar, nenhum container com label org.testcontainers=true permaneceu ativo.
 
-JaCoCo manteve 426/430 linhas (99,07%) e 111/116 ramos (95,69%). A configuração nova está em src/test e não altera o denominador de produção. O resultado remoto será acompanhado no PR; esta evidência é da execução local, não uma afirmação de validação prévia da nova CI.
+JaCoCo manteve 426/430 linhas (99,07%) e 111/116 ramos (95,69%). A configuração nova está em src/test e não altera o denominador de produção. A [execução remota 40714746417](https://github.com/hodestito/gestao-pessoas/actions/runs/40714746417), revisão 01eabaa, também passou com 87 testes sem falhas/erros/ignorados e construção Docker concluída. Os artefatos baixados confirmaram os mesmos contadores.
 
 O modo padrão clean verify também passou: 87 testes contabilizados, 85 executados, dois Kafka ignorados e zero falhas/erros. Não houve descoberta de Docker ou criação de containers nesse log. A inspeção do JAR confirmou ausência de bibliotecas Testcontainers em BOOT-INF/lib.
 
