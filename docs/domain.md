@@ -44,7 +44,7 @@ Transferência, reativação, recontratação, edição de cadastro, exclusão d
 | Inativar colaborador produz EmployeeStatusChangedEvent. | Enunciado | Mudança de estado e publicação de eventos. |
 | Consumidores geram logs e atualizam uma tabela de histórico. | Enunciado | Consumidores de eventos e persistência do histórico. |
 
-O cadastro verifica existência e unicidade e persiste colaborador e EmployeeCreatedEvent na mesma transação, usando Outbox. As constraints garantem unicidade e referências; a inativação está integrada à main e usa controle otimista. Nesta branch, a transição também grava EmployeeStatusChangedEvent na mesma transação; Kafka e histórico atendem aos dois tipos.
+O cadastro verifica existência e unicidade e persiste colaborador e EmployeeCreatedEvent na mesma transação, usando Outbox. As constraints garantem unicidade e referências; a inativação integrada à main usa controle otimista e grava EmployeeStatusChangedEvent na mesma transação. Kafka e histórico atendem aos dois tipos.
 
 ## Agregados e invariantes: proposta de modelagem
 
@@ -98,7 +98,7 @@ Kafka não torna a transação do banco e a publicação atômicas. Sem uma estr
 2. Linguagem compartilhada: iniciada, com definições confirmadas de inativo e cargo.
 3. Regras e cenários: em discussão; consultar a tabela de propostas.
 4. Contexto e agregados: propostos neste documento, ainda sujeitos à revisão.
-5. Modelo: seis endpoints, ambos os eventos e serviço de domínio de admissão integrados à main. A paginação própria da aplicação e a igualdade por ID de Department/Position estão implementadas nesta branch para revisão, conforme decisão 009.
-6. Validação do modelo com testes: domínio, aplicação, integração HTTP/banco, concorrência e ambos os eventos. Avaliação da cobertura permanece pendente.
+5. Modelo: seis endpoints, ambos os eventos, serviço de admissão, paginação própria da aplicação e igualdade por ID das entidades integrados à main.
+6. Validação: domínio, aplicação, integração HTTP/banco, concorrência e ambos os eventos. A medição deste incremento registrou 100% das linhas do domínio e da aplicação, com 90,48% e 100% de ramos, respectivamente. Isso indica execução dos caminhos medidos, sem comprovar todos os cenários possíveis; ver decisão 010.
 
 Para explicar este passo: quais regras estão confirmadas, quais são propostas e por que uma regra pode precisar da entidade, do caso de uso e do banco trabalhando juntos?

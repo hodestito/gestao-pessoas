@@ -1,6 +1,6 @@
 # Gestão de pessoas — desafio técnico
 
-Projeto em construção para o desafio técnico. Os seis endpoints, os eventos com Outbox/Kafka e o serviço de domínio de admissão estão integrados à main. Esta branch remove Spring Data dos contratos da aplicação e alinha a identidade de Department e Position ao ID, para revisão.
+Projeto em construção para o desafio técnico. Os seis endpoints, os eventos com Outbox/Kafka, a política de admissão e a revisão de paginação/identidade estão integrados à main. Esta branch acrescenta medição de cobertura e testes de falha, para revisão.
 
 Employee contempla criação ativa, e-mail normalizado e inativação no domínio. Cadastro e inativação persistem empregado e seu evento na mesma transação. A inativação preserva o registro, usa controle otimista de versão e só registra evento se houver mudança efetiva.
 
@@ -17,6 +17,7 @@ Employee contempla criação ativa, e-mail normalizado e inativação no domíni
 - [Decisão 007](docs/decisions/007-evento-inativacao.md): evento de inativação, dois tópicos e histórico compartilhado.
 - [Decisão 008](docs/decisions/008-servico-dominio-cadastro.md): política de admissão, consultas do domínio e divisão de responsabilidades.
 - [Decisão 009](docs/decisions/009-nucleo-independente-e-identidade.md): paginação própria e identidade das entidades por ID.
+- [Decisão 010](docs/decisions/010-cobertura-e-caminhos-criticos.md): medição de cobertura, lacunas priorizadas e resultados.
 - [Uso de IA](AI_USAGE.md): participação da IA e padrão dos commits identificados com `[IA]`.
 
 Os documentos distinguem requisitos do enunciado, definições do candidato, propostas e comportamento implementado. O Git registra a evolução real; os documentos apresentam o entendimento atual. A arquitetura detalhada e outros registros de decisão serão acrescentados conforme discutirmos essas decisões.
@@ -128,11 +129,46 @@ docker compose exec -T postgres createdb -U gestao gestao_pessoas_test
 
 O teste Kafka cria e remove seus próprios tópicos e grupo. Verifica criação, inativação repetida, consumo em ordem inversa, falhas transitórias e duplicatas com confirmação de offset. O agendamento é desabilitado nos testes controlados de falhas; o publicador é chamado explicitamente e os consumidores são reais. Não use uma base de produção ou com outros publicadores ativos. Testcontainers permanece adiado por decisão do responsável técnico.
 
+## Cobertura de testes
+
+JaCoCo 0.8.16 acompanha a execução na JVM de testes e gera relatórios no verify. Para reproduzir a medição completa com H2 e Kafka real:
+
+```sh
+docker compose up -d --wait kafka
+./mvnw clean verify -Dkafka.tests=true
+```
+
+Com o banco PostgreSQL exclusivo já criado na seção anterior:
+
+```sh
+./mvnw clean verify -Dkafka.tests=true -Dspring.profiles.active=postgres \
+  -Dspring.datasource.url=jdbc:postgresql://localhost:5432/gestao_pessoas_test \
+  -Dspring.datasource.username=gestao -Dspring.datasource.password=gestao_local
+```
+
+O relatório HTML fica em target/site/jacoco/index.html; o XML, em target/site/jacoco/jacoco.xml; os dados de execução, em target/jacoco.exec. No Mac, abra o HTML com `open target/site/jacoco/index.html`. target/ é gerado localmente e não é versionado. Cada execução substitui os dados anteriores; clean remove relatórios antigos. Executar apenas test não atualiza o HTML/XML, pois o relatório está ligado ao verify.
+
+Medição de 28/10/2026, com 83 testes sem falhas ou ignorados em cada banco, incluindo Kafka real:
+
+| Escopo | Linhas | Ramos |
+|---|---:|---:|
+| Total | 99,03% (408/412) | 95,69% (111/116) |
+| Domínio | 100% (92/92) | 90,48% (38/42) |
+| Aplicação | 100% (60/60) | 100% (30/30) |
+| Infraestrutura | 99,04% (207/209) | 96,55% (28/29) |
+| Interfaces | 100% (48/48) | 100% (15/15) |
+
+Os números foram iguais no H2 e no PostgreSQL, em execuções separadas, sem somar seus dados. O relatório inclui todas as classes de produção analisáveis, sem exclusões manuais. A medição inicial, com 74 testes, era de 94,90% de linhas e 81,03% de ramos.
+
+Os testes adicionais verificam listagem HTTP sem filtros/nome em branco, contratos Kafka inválidos sem escrita de histórico, tipo desconhecido sem envio ao tópico errado, processamento do lote após um evento adiado, interrupção do poller e tradução de falhas conhecidas/desconhecidas da persistência.
+
+Cobertura mostra código executado, não comprova todas as regras, concorrências ou falhas de infraestrutura. A meta sugerida de 80% serve como referência; não há gate percentual automático configurado. Sem -Dkafka.tests=true, os dois testes Kafka reais ficam ignorados e os percentuais podem mudar. As lacunas e limites estão na decisão 010.
+
 ## Próximos incrementos
 
-1. Revisar e integrar a paginação própria e a identidade de Department/Position após aprovação do responsável técnico.
-2. Medir cobertura e fechar lacunas relevantes dos testes.
-3. Revisar operação da mensageria, retenção e tratamento de mensagens inválidas conforme o escopo.
-4. Acrescentar testes de integração, Docker, documentação da API e registro do uso de IA.
+1. Revisar e integrar cobertura e testes de falha após aprovação do responsável técnico.
+2. Documentar a API com OpenAPI/Swagger.
+3. Criar Dockerfile e validar a aplicação no Compose.
+4. Consolidar documentação, CI, revisão final e defesa técnica; avaliar melhorias operacionais conforme o prazo.
 
-Dockerfile, documentação Swagger, CI e medição de cobertura continuam pendentes.
+Dockerfile, documentação Swagger e CI continuam pendentes.
