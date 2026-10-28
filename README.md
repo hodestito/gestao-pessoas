@@ -1,6 +1,6 @@
 # Gestão de pessoas — desafio técnico
 
-Projeto em construção para o desafio técnico. Os seis endpoints, os eventos com Outbox/Kafka, a política de admissão, a revisão de paginação/identidade e a cobertura estão integrados à main. Esta branch acrescenta documentação OpenAPI/Swagger, para revisão.
+Projeto em construção para o desafio técnico. Os seis endpoints, os eventos com Outbox/Kafka, a política de admissão, a revisão de paginação/identidade, a cobertura e a documentação OpenAPI estão integrados à main. Esta branch acrescenta a execução completa com Docker/Compose, para revisão.
 
 Employee contempla criação ativa, e-mail normalizado e inativação no domínio. Cadastro e inativação persistem empregado e seu evento na mesma transação. A inativação preserva o registro, usa controle otimista de versão e só registra evento se houver mudança efetiva.
 
@@ -19,6 +19,7 @@ Employee contempla criação ativa, e-mail normalizado e inativação no domíni
 - [Decisão 009](docs/decisions/009-nucleo-independente-e-identidade.md): paginação própria e identidade das entidades por ID.
 - [Decisão 010](docs/decisions/010-cobertura-e-caminhos-criticos.md): medição de cobertura, lacunas priorizadas e resultados.
 - [Decisão 011](docs/decisions/011-openapi-swagger.md): documentação HTTP, alternativas e limites do contrato gerado.
+- [Decisão 012](docs/decisions/012-docker-compose.md): imagem da aplicação, rede, inicialização e validação do Compose.
 - [Uso de IA](AI_USAGE.md): participação da IA e padrão dos commits identificados com `[IA]`.
 
 Os documentos distinguem requisitos do enunciado, definições do candidato, propostas e comportamento implementado. O Git registra a evolução real; os documentos apresentam o entendimento atual. A arquitetura detalhada e outros registros de decisão serão acrescentados conforme discutirmos essas decisões.
@@ -28,6 +29,40 @@ Os documentos distinguem requisitos do enunciado, definições do candidato, pro
 - Java 21 e Spring Boot 4.1.2
 - Maven Wrapper, Spring Web, JPA para agregados, Outbox e histórico, Flyway, Kafka, validação, Actuator, H2 e driver PostgreSQL
 - H2 é o banco usado por padrão; PostgreSQL pode ser selecionado pelo perfil `postgres`. O Flyway cria as tabelas de departamentos, cargos e colaboradores.
+
+## Execução completa com Docker Compose
+
+Requer Docker Engine e Compose v2 ou posterior (por exemplo, Docker Desktop em execução). Não exige JDK ou Maven instalados no computador. Na raiz do repositório:
+
+```sh
+docker compose up -d --build --wait
+docker compose ps
+curl --fail http://localhost:8080/actuator/health
+```
+
+Esse comando compila a aplicação em uma etapa com JDK 21 e Maven Wrapper, e a executa em outra com JRE 21, usando um usuário sem privilégios. O primeiro build precisa de internet para imagens e dependências; o cache do BuildKit reaproveita downloads posteriores. O build da imagem usa -DskipTests para empacotar; os comandos de testes estão nas seções próprias e devem ser executados antes da integração da branch.
+
+O Compose ativa os perfis postgres,kafka na aplicação, cria o schema com Flyway e mantém os dados em volumes. PostgreSQL e Kafka devem ficar saudáveis antes de iniciar a aplicação; o healthcheck dela consulta Actuator. Acesse [Swagger UI](http://localhost:8080/swagger-ui.html) e use os exemplos HTTP deste README. As portas publicadas ficam limitadas ao próprio computador: aplicação 8080, PostgreSQL 5432 e Kafka 9092. Usuário gestao e senha gestao_local são credenciais apenas do ambiente local.
+
+Entre containers, a aplicação usa postgres:5432 e kafka:19092. localhost dentro do container aponta para ele próprio. A porta Kafka 9092 anuncia o endereço para clientes no Mac; o listener 19092 anuncia o nome kafka para clientes da rede Compose.
+
+Para consultar logs e parar sem apagar os dados:
+
+```sh
+docker compose logs -f app
+docker compose stop
+```
+
+docker compose down remove containers e rede, mas mantém volumes; não acrescente -v se quiser preservar os dados. Alterações nos fontes exigem novo build. Para executar a aplicação no IntelliJ/Maven, suba apenas as dependências com `docker compose up -d --wait postgres kafka` e pare app, se estiver rodando, para liberar a porta 8080 e evitar dois publicadores sobre a mesma base.
+
+APP_PORT, POSTGRES_PORT e KAFKA_HOST_PORT permitem trocar somente as portas do computador. Ao usar outro nome de projeto com -p, o Compose cria rede e volumes independentes. Exemplo usado na validação:
+
+```sh
+APP_PORT=18080 POSTGRES_PORT=15432 KAFKA_HOST_PORT=19094 \
+  docker compose -p gestao-docker-smoke up -d --build --wait
+```
+
+Nesse caso, use http://localhost:18080 para a API. Mantenha as mesmas variáveis e o mesmo -p nos comandos posteriores desse ambiente. As portas internas continuam 8080/5432/19092. Os healthchecks verificam disponibilidade naquele momento; não garantem disponibilidade futura nem entrega imediata dos eventos.
 
 ## Primeiro incremento
 
@@ -177,8 +212,7 @@ Cobertura mostra código executado, não comprova todas as regras, concorrência
 
 ## Próximos incrementos
 
-1. Revisar e integrar a documentação OpenAPI/Swagger após aprovação do responsável técnico.
-2. Criar Dockerfile e validar a aplicação no Compose.
-3. Consolidar documentação, CI, revisão final e defesa técnica; avaliar melhorias operacionais conforme o prazo.
+1. Revisar e integrar Dockerfile/Compose após aprovação do responsável técnico.
+2. Consolidar documentação, CI, revisão final e defesa técnica; avaliar melhorias operacionais conforme o prazo.
 
-Dockerfile e CI continuam pendentes.
+CI e revisão final continuam pendentes.

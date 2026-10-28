@@ -1,6 +1,6 @@
 # 011 — Contrato HTTP com OpenAPI e Swagger UI
 
-Estado: implementado em feature/openapi-documentation, aguardando revisão e aprovação de merge. Data: 28/10/2026. O PR #8 foi integrado à main após autorização explícita, antes desta etapa.
+Estado: integrado à main pelo PR #9 após validação do responsável técnico. Data: 28/10/2026. O PR #8 foi integrado à main após autorização explícita, antes desta etapa.
 
 ## Objetivo e escolha
 
