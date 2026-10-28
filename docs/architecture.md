@@ -19,8 +19,6 @@ flowchart LR
     APP --> DOM
     INF["infrastructure: configuração, JPA e Kafka"] --> APP
     INF --> DOM
-    BOOT["Spring Boot: composição da aplicação"] --> REST
-    BOOT --> INF
 ```
 
 | Camada | Classes representativas | Responsabilidade |
