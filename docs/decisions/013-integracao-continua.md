@@ -1,6 +1,6 @@
 # 013 — Integração contínua
 
-Estado: implementado em ci/github-actions, validado remotamente e aguardando revisão/aprovação de merge pelo PR #11. Data: 28/10/2026. O PR #10 foi integrado após aprovação do responsável técnico.
+Estado: integrado à main pelo PR #11 após aprovação do responsável técnico. Data: 28/10/2026. Este registro descreve a CI original com serviços Compose; sua preparação de infraestrutura foi substituída por Testcontainers na decisão 014. Os resultados abaixo são históricos da revisão identificada.
 
 ## Escolha e escopo
 
