@@ -61,7 +61,8 @@ Employee foi iniciado como classe com identidade pelo id, criação ACTIVE e com
 ### Quem protege cada tipo de regra
 
 - **Dentro de Employee:** validade dos seus valores e transições permitidas de estado.
-- **Na aplicação:** coordenar a consulta a departamento/cargo e a gravação do colaborador.
+- **No serviço de domínio EmployeeRegistrationPolicy:** aplicar as condições de admissão que envolvem departamento, cargo e disponibilidade do e-mail, consultando uma porta do domínio.
+- **Na aplicação:** coordenar validação, criação/persistência do colaborador e registro do evento na Outbox.
 - **No banco:** impedir e-mails duplicados e referências inválidas mesmo com requisições simultâneas.
 
 Por exemplo, consultar um e-mail antes de gravar não resolve a concorrência: duas requisições podem consultar ao mesmo tempo e ambas encontrarem o e-mail disponível. A restrição de unicidade decide a gravação, e a API deve converter a violação esperada em erro de negócio.
@@ -70,13 +71,15 @@ Por exemplo, consultar um e-mail antes de gravar não resolve a concorrência: d
 
 CostCenterCode e Email são objetos de valor. Email remove espaços nas extremidades e converte para minúsculas com `Locale.ROOT`, para a comparação aprovada pelo candidato. O formato implementado é uma política simples com limite técnico de 254 caracteres; não cobre todos os endereços possíveis nas RFCs nem comprova que o endereço exista. A unicidade entre colaboradores é protegida por constraint no banco; outra constraint exige que o valor gravado esteja em minúsculas e sem espaços externos.
 
-O enunciado exige serviços de domínio. Ainda precisamos identificar e justificar qual regra de negócio, independente de frameworks, deve ser expressa por esse serviço. Os casos de uso existentes são serviços de aplicação; não devem ser apresentados como serviços de domínio apenas para cumprir a nomenclatura.
+O responsável técnico solicitou extrair as regras existentes de admissão para EmployeeRegistrationPolicy. O serviço decide se departamento e cargo existem e se o e-mail está disponível; essas informações envolvem outros registros e não pertencem somente à entidade Employee. EmployeeRegistrationRequirements é a porta de consulta do domínio; JpaEmployeeRegistrationRequirements fornece os fatos usando os repositórios JPA existentes.
+
+A política e EmployeeRegistrationException não dependem de Spring, HTTP ou JPA. A configuração Spring instancia o serviço; CreateEmployee delega a validação e mantém a coordenação da persistência/evento. As regras e sua ordem continuam as mesmas, e as constraints continuam indispensáveis sob concorrência. A decisão 008 registra a alternativa de manter os checks na aplicação e o custo das classes adicionais.
 
 ## Propostas que precisam de revisão
 
 | Tema | Proposta inicial | Questão ainda aberta |
 |---|---|---|
-| DELETE | Integrado pelo PR #3; inativa e preserva o registro; retorna 204 para alteração ou repetição e 404 para id inexistente. | Extensão de Outbox/histórico implementada nesta branch para revisão. |
+| DELETE | API e evento integrados pelos PRs #3 e #5; retorna 204 para alteração ou repetição e 404 para id inexistente. | Acompanhar limites de publicação/consumo documentados nas decisões 006 e 007. |
 | Inativação repetida | O domínio retorna false quando não há mudança; a API responde 204 sem nova gravação nem evento adicional. | Reenvios do mesmo evento lógico podem ocorrer e são deduplicados no histórico. |
 | Listagem | Implementada com filtro opcional por nome e status, ativos e inativos por padrão e paginação. | Avaliar desempenho e estabilidade entre requisições conforme o volume de dados. |
 | Busca por departamento | Implementada com nome exato sem distinguir caixa, paginação, todos os departamentos homônimos e lista vazia quando não há correspondência. | Avaliar requisitos de acentuação e desempenho conforme o uso. |
@@ -95,7 +98,7 @@ Kafka não torna a transação do banco e a publicação atômicas. Sem uma estr
 2. Linguagem compartilhada: iniciada, com definições confirmadas de inativo e cargo.
 3. Regras e cenários: em discussão; consultar a tabela de propostas.
 4. Contexto e agregados: propostos neste documento, ainda sujeitos à revisão.
-5. Modelo de Employee: seis endpoints e evento de criação integrados à main; evento de inativação com Outbox/Kafka implementado nesta branch para revisão.
+5. Modelo de Employee: seis endpoints e ambos os eventos integrados à main; serviço de domínio para admissão implementado nesta branch para revisão. A identidade de Department/Position, ainda records, permanece para avaliação arquitetural.
 6. Validação do modelo com testes: domínio, aplicação, integração HTTP/banco, concorrência e ambos os eventos. Avaliação da cobertura permanece pendente.
 
 Para explicar este passo: quais regras estão confirmadas, quais são propostas e por que uma regra pode precisar da entidade, do caso de uso e do banco trabalhando juntos?

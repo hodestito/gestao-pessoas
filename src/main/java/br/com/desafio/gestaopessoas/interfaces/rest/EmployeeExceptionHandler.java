@@ -1,6 +1,6 @@
 package br.com.desafio.gestaopessoas.interfaces.rest;
 
-import br.com.desafio.gestaopessoas.application.EmployeeRegistrationException;
+import br.com.desafio.gestaopessoas.domain.employee.EmployeeRegistrationException;
 import java.util.Locale;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;

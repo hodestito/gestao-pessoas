@@ -1,4 +1,4 @@
-package br.com.desafio.gestaopessoas.application;
+package br.com.desafio.gestaopessoas.domain.employee;
 
 public class EmployeeRegistrationException extends RuntimeException {
     public enum Reason { DEPARTMENT_NOT_FOUND, POSITION_NOT_FOUND, EMAIL_ALREADY_EXISTS }

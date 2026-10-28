@@ -1,6 +1,6 @@
 # 007 — Evento de inativação e dois tópicos Kafka
 
-Estado: implementação em feature/employee-status-events aguardando revisão. O responsável técnico aprovou dois tópicos, preservando o atual. Data: 28/10/2026.
+Estado: aprovado pelo responsável técnico e integrado à main no PR #5. O responsável técnico aprovou dois tópicos, preservando o atual. Data: 28/10/2026.
 
 ## Problema e decisão
 

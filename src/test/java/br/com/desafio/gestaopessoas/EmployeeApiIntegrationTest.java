@@ -57,8 +57,12 @@ class EmployeeApiIntegrationTest {
     }
 
     @Test void rejectsMissingReferencesAndInvalidEmail() throws Exception {
-        assertEquals(422, post(email, UUID.randomUUID(), position).statusCode());
-        assertEquals(422, post(email, department, UUID.randomUUID()).statusCode());
+        var missingDepartment = post(email, UUID.randomUUID(), position);
+        assertEquals(422, missingDepartment.statusCode());
+        assertTrue(missingDepartment.body().contains("DEPARTMENT_NOT_FOUND"));
+        var missingPosition = post(email, department, UUID.randomUUID());
+        assertEquals(422, missingPosition.statusCode());
+        assertTrue(missingPosition.body().contains("POSITION_NOT_FOUND"));
         assertEquals(400, post("invalid", department, position).statusCode());
         assertEquals(0, jdbc.queryForObject("select count(*) from employees where email = ?", Integer.class, email));
     }
