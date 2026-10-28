@@ -1,14 +1,14 @@
 # Casos de uso
 
-Atualizado em 28/10/2026. Complementa o [modelo de domínio](domain.md). Contratos propostos ainda não são comportamento disponível na API.
+Atualizado em 28/10/2026. Descreve os seis fluxos implementados, complementando o [modelo de domínio](domain.md) e a [arquitetura](architecture.md). Os critérios específicos foram definidos com o candidato quando o enunciado não os determinava.
 
 ## Visão geral
 
 | ID | Caso de uso | Endpoint obrigatório | Situação |
 |---|---|---|---|
-| UC-01 | Criar departamento | POST /departments | Implementado, sujeito à revisão do modelo. |
-| UC-02 | Criar cargo | POST /positions | Implementado, sujeito à revisão do modelo. |
-| UC-03 | Cadastrar colaborador | POST /employees | Outbox, Kafka e histórico integrados no PR #4; extração das regras para serviço de domínio nesta branch para revisão. |
+| UC-01 | Criar departamento | POST /departments | Implementado e integrado à main. |
+| UC-02 | Criar cargo | POST /positions | Implementado e integrado à main. |
+| UC-03 | Cadastrar colaborador | POST /employees | Cadastro, política de domínio, Outbox/Kafka e histórico integrados à main. |
 | UC-04 | Listar colaboradores | GET /employees | Implementado; integração aprovada pelo responsável técnico. |
 | UC-05 | Buscar por departamento | GET /employees/search?department=RH | Implementado, com integração autorizada pelo responsável técnico. |
 | UC-06 | Inativar colaborador | DELETE /employees/{id} | API e evento integrados à main pelos PRs #3 e #5. |
@@ -59,7 +59,7 @@ O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo 
 
 **Erros HTTP implementados:** 400 para valores/identificadores malformados; 422 para referências inexistentes; 409 para e-mail duplicado. Esses códigos foram aprovados pelo responsável técnico, não são exigências expressas do enunciado. Violações inesperadas de integridade não são transformadas em erros de negócio conhecidos.
 
-**Cenários verificados e pendentes:**
+**Cenários verificados:**
 
 - Dados válidos e referências existentes criam colaborador e evento na mesma transação; publicação e consumo são assíncronos.
 - Departamento inexistente impede o cadastro, sem colaborador nem evento de criação confirmado.
@@ -85,7 +85,7 @@ O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo 
 
 **Entrada obrigatória pelo exemplo do enunciado:** nome do departamento no parâmetro department. O exemplo RH não define sozinho se a comparação é parcial, exata ou sensível a caixa.
 
-**Comportamento implementado para revisão:** correspondência exata sem distinguir maiúsculas/minúsculas, incluindo ativos/inativos e com paginação. Espaços nas extremidades são removidos; acentos não são ignorados intencionalmente. Sem correspondências, retornar 200 com coleção vazia. Nomes repetidos identificam todos os departamentos correspondentes, pois o cadastro atual permite repetições.
+**Comportamento implementado:** correspondência exata sem distinguir maiúsculas/minúsculas, incluindo ativos/inativos e com paginação. Espaços nas extremidades são removidos; acentos não são ignorados intencionalmente. Sem correspondências, retornar 200 com coleção vazia. Nomes repetidos identificam todos os departamentos correspondentes, pois o cadastro atual permite repetições.
 
 **Erros:** 400 para parâmetro ausente/vazio ou paginação inválida.
 

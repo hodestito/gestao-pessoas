@@ -91,6 +91,14 @@
 
 **Validação e limites:** a execução local completa passou com os mesmos 87 testes, zero falhas, erros ou ignorados e cobertura de 99,07%/95,69%. Foram observados containers/portas dinâmicos e sua remoção ao final. O isolamento é por contexto Spring, com reaproveitamento pelo cache e limpeza de fixtures; não é por método. A decisão 014 distingue o resultado local do acompanhamento remoto no PR.
 
+### Consolidação para apresentação
+
+**Instrução:** “Vamos revisar e consolidar a documentação para deixar pronta para a apresentação final.”
+
+**Resultado:** a IA confrontou o README, o domínio, os casos de uso e as ADRs com o código e o enunciado. Reorganizou a entrada do repositório, consolidou diagramas e responsabilidades, preparou roteiro de demonstração/defesa e matriz de requisitos/evidências. As ADRs mantêm os resultados históricos, com estados atualizados e um índice de evolução.
+
+**Revisão:** os textos distinguem commit de flush, controle otimista de bloqueio pessimista, confirmação da API de consumo do histórico e contratos Kafka de versão da API HTTP. A pendência de repositório público no enunciado versus privado por orientação do candidato ficou explícita, sem alterar visibilidade ou enviar mensagens à avaliadora. O incremento modifica apenas Markdown; a validação documental e o ensaio técnico são registrados no PR.
+
 ## Decisões influenciadas por IA e revisão técnica
 
 1. **Domínio e arquitetura:** a IA propôs uma organização em camadas e a separação do domínio de frameworks. O modelo foi revisto com o responsável técnico; os limites e as decisões permanecem documentados em `docs/decisions/`.
