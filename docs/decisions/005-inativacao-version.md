@@ -12,7 +12,7 @@ O fluxo transporta o colaborador lido junto com a versão esperada em `Versioned
 
 Cada tentativa ocorre por um componente Spring separado com `@Transactional(REQUIRES_NEW)`. Se a primeira gravação falhar por conflito otimista, sua transação termina com rollback e o coordenador tenta uma vez em outra transação, relendo o registro. Se já estiver inativo, não há nova gravação. Um segundo conflito é propagado e retorna 409.
 
-`REQUIRES_NEW` cria transações independentes: se esse fluxo vier a ser chamado de uma transação externa, a operação interna pode confirmar independentemente dela. O desenho de transação e eventos deve ser revisto quando Kafka for integrado.
+`REQUIRES_NEW` cria transações independentes: se esse fluxo vier a ser chamado de uma transação externa, a operação interna pode confirmar independentemente dela. Na extensão descrita na decisão 007, a gravação da Outbox ocorre dentro da mesma tentativa transacional, com MANDATORY; falha desfaz mudança de estado, versão e evento.
 
 ## Alternativas e limitações
 
@@ -20,7 +20,7 @@ Atualização condicional `UPDATE ... WHERE status = 'ACTIVE'` poderia informar 
 
 O controle só protege operações que verifiquem e incrementem a versão. Escritas SQL externas que não respeitem o mecanismo podem contorná-lo. A releitura é limitada a uma tentativa; conflitos persistentes não são repetidos indefinidamente.
 
-O evento `EmployeeStatusChangedEvent` e sua persistência/publicação ainda não existem. Controle otimista não garante entrega ao Kafka nem a atomicidade entre banco e broker. A decisão 006 adota Outbox inicialmente para cadastro; a extensão para inativação será outro incremento.
+Controle otimista não garante entrega ao Kafka nem a atomicidade entre banco e broker. A decisão 006 adota Outbox inicialmente para cadastro; a extensão de inativação está implementada para revisão e descrita na decisão 007.
 
 ## Verificação
 
