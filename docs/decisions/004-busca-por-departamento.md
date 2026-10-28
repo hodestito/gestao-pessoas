@@ -6,11 +6,11 @@ Estado: implementação revisada e integração à main autorizada pelo respons�
 
 O enunciado exige `GET /employees/search?department=RH`, sem definir se a busca é parcial nem o tratamento de nomes repetidos. Foi implementada a correspondência exata, sem diferenciar caixa, depois de remover espaços nas extremidades. Nomes de departamento não são únicos no modelo atual: todos os departamentos homônimos são incluídos, com colaboradores ativos e inativos.
 
-Parâmetro ausente/vazio ou paginação inválida retorna 400; departamento sem correspondência retorna 200 com página vazia. As respostas usam Page e o mesmo contrato, limites e ordenação da listagem geral.
+Parâmetro ausente/vazio ou paginação inválida retorna 400; departamento sem correspondência retorna 200 com página vazia. As respostas usam PageResult e o mesmo contrato, limites e ordenação da listagem geral, conforme revisão na decisão 009.
 
 ## Implementação e alternativas
 
-`SearchEmployeesByDepartment` é um caso de uso e `EmployeeRepository` declara a consulta. `EmployeePagination` centraliza limites e ordenação para esta busca e para a listagem. `EmployeeJpaRepository` usa JPQL com um parâmetro nomeado e uma subconsulta `exists`, relacionando id do departamento ao identificador salvo no colaborador. O domínio continua independente de JPA; Page permanece na aplicação conforme escolha anterior.
+`SearchEmployeesByDepartment` é um caso de uso e `EmployeeRepository` declara a consulta. `EmployeePagination` centraliza parâmetros e limites; o contrato exige ordenação por createdAt/id, aplicada pelo adaptador JPA. `EmployeeJpaRepository` usa JPQL com parâmetro nomeado e subconsulta `exists`, relacionando id do departamento ao identificador salvo no colaborador. Spring Data fica na infraestrutura, conforme decisão 009.
 
 Alternativas: exigir nomes de departamento únicos e consultar um único departamento; ou buscar por id de departamento. Ambas exigem alteração de contrato ou regra de negócio. A subconsulta considera todos os nomes coincidentes sem multiplicar colaboradores por joins acidentais.
 

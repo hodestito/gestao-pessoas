@@ -1,10 +1,10 @@
 package br.com.desafio.gestaopessoas.application;
 
 import br.com.desafio.gestaopessoas.domain.employee.EmployeeStatus;
+import br.com.desafio.gestaopessoas.domain.employee.Employee;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -13,14 +13,13 @@ class ListEmployeesTest {
     private final EmployeeRepository repository = mock(EmployeeRepository.class);
     private final ListEmployees useCase = new ListEmployees(repository);
 
-    @Test void passesFiltersAndStablePaginationToRepository() {
-        when(repository.findAll(anyString(), eq(EmployeeStatus.INACTIVE), any())).thenReturn(Page.empty());
-        useCase.execute("  Hugo  ", EmployeeStatus.INACTIVE, 1, 20);
-        var pageable = ArgumentCaptor.forClass(Pageable.class);
+    @Test void passesFiltersAndOwnPaginationToRepository() {
+        var result = new PageResult<Employee>(List.of(), 1, 20, 0);
+        when(repository.findAll(anyString(), eq(EmployeeStatus.INACTIVE), any())).thenReturn(result);
+        assertSame(result, useCase.execute("  Hugo  ", EmployeeStatus.INACTIVE, 1, 20));
+        var pageable = ArgumentCaptor.forClass(EmployeePagination.class);
         verify(repository).findAll(eq("Hugo"), eq(EmployeeStatus.INACTIVE), pageable.capture());
-        assertEquals(1, pageable.getValue().getPageNumber());
-        assertEquals(20, pageable.getValue().getPageSize());
-        assertEquals("createdAt: ASC,id: ASC", pageable.getValue().getSort().toString());
+        assertEquals(new EmployeePagination(1, 20), pageable.getValue());
     }
 
     @Test void rejectsPageAndSizeOutsideContractBeforeQuerying() {
@@ -32,7 +31,7 @@ class ListEmployeesTest {
     }
 
     @Test void treatsBlankNameAsNoFilter() {
-        when(repository.findAll(isNull(), isNull(), any())).thenReturn(Page.empty());
+        when(repository.findAll(isNull(), isNull(), any())).thenReturn(new PageResult<>(List.of(), 0, 20, 0));
         useCase.execute("  ", null, 0, 20);
         verify(repository).findAll(isNull(), isNull(), any());
     }

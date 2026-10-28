@@ -7,6 +7,7 @@ import br.com.desafio.gestaopessoas.application.ListEmployees;
 import br.com.desafio.gestaopessoas.application.SearchEmployeesByDepartment;
 import br.com.desafio.gestaopessoas.application.EmployeeDeactivation;
 import br.com.desafio.gestaopessoas.application.DeactivationResult;
+import br.com.desafio.gestaopessoas.application.PageResult;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -15,7 +16,6 @@ import java.net.URI;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.List;
-import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,9 +43,9 @@ public class EmployeeController {
         }
     }
     record EmployeePageResponse(List<EmployeeResponse> content, int page, int size, long totalElements, int totalPages) {
-        static EmployeePageResponse from(Page<Employee> result) {
-            return new EmployeePageResponse(result.getContent().stream().map(EmployeeResponse::from).toList(),
-                    result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages());
+        static EmployeePageResponse from(PageResult<Employee> result) {
+            return new EmployeePageResponse(result.content().stream().map(EmployeeResponse::from).toList(),
+                    result.page(), result.size(), result.totalElements(), result.totalPages());
         }
     }
 

@@ -56,7 +56,7 @@ Uma **invariante** é uma regra que precisa continuar verdadeira após uma opera
 | Department | Proteger os dados do departamento. | Não contém uma coleção de todos os colaboradores. |
 | Position | Proteger os dados do cargo. | Não contém uma coleção de todos os colaboradores. |
 
-Employee foi iniciado como classe com identidade pelo id, criação ACTIVE e comportamento de inativação. Department e Position já existem como registros imutáveis com validações de construção; isso, isoladamente, não demonstra todo o DDD exigido pelo desafio.
+Employee, Department e Position são classes finais com identidade pelo ID dentro do próprio tipo. Employee protege criação ACTIVE e inativação; Department/Position mantêm dados imutáveis e validações de construção. Duas representações da mesma entidade com atributos descritivos diferentes continuam iguais se o ID for o mesmo. Objetos de valor, como Email e CostCenterCode, continuam comparados pelo valor.
 
 ### Quem protege cada tipo de regra
 
@@ -98,7 +98,7 @@ Kafka não torna a transação do banco e a publicação atômicas. Sem uma estr
 2. Linguagem compartilhada: iniciada, com definições confirmadas de inativo e cargo.
 3. Regras e cenários: em discussão; consultar a tabela de propostas.
 4. Contexto e agregados: propostos neste documento, ainda sujeitos à revisão.
-5. Modelo de Employee: seis endpoints e ambos os eventos integrados à main; serviço de domínio para admissão implementado nesta branch para revisão. A identidade de Department/Position, ainda records, permanece para avaliação arquitetural.
+5. Modelo: seis endpoints, ambos os eventos e serviço de domínio de admissão integrados à main. A paginação própria da aplicação e a igualdade por ID de Department/Position estão implementadas nesta branch para revisão, conforme decisão 009.
 6. Validação do modelo com testes: domínio, aplicação, integração HTTP/banco, concorrência e ambos os eventos. Avaliação da cobertura permanece pendente.
 
 Para explicar este passo: quais regras estão confirmadas, quais são propostas e por que uma regra pode precisar da entidade, do caso de uso e do banco trabalhando juntos?

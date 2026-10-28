@@ -7,6 +7,12 @@
 
 ## Prompts e interações efetivas
 
+### Independência do núcleo e identidade das entidades
+
+**Instrução:** “Quero deixar o dominio independente de Spring Data e deixar coerente as entidades Department e Position, identificadas por ID.”
+
+**Resultado:** o domínio já era independente de Spring Data; a revisão retirou essa dependência também da aplicação. Foram criados tipos próprios de paginação e a conversão ficou no adaptador JPA. Department/Position passaram de records para classes finais com igualdade/hashCode por ID. Foram discutidas as alternativas de manter Page na aplicação e de sobrescrever igualdade nos records. A independência foi verificada compilando domínio/aplicação apenas com o JDK 21.
+
 ### Serviço de domínio
 
 **Pergunta e instrução:** “O que é serviço de dominio?” e “Crie as regras numa classe de serviço de dominio”.
@@ -47,11 +53,12 @@
 
 1. **Domínio e arquitetura:** a IA propôs uma organização em camadas e a separação do domínio de frameworks. O modelo foi revisto com o responsável técnico; os limites e as decisões permanecem documentados em `docs/decisions/`.
 2. **Cadastro:** após discussão, o responsável técnico aprovou e-mail único inclusive para inativos, departamento e cargo existentes, HTTP 409 para e-mail duplicado, HTTP 422 para referências inexistentes e uma transação por cadastro. Uma constraint no banco complementa a consulta prévia de e-mail.
-3. **Listagem e busca:** o responsável técnico escolheu `Page` do Spring Data. A IA implementou filtros e paginação, e documentou o acoplamento, o custo potencial de contagem e os limites de paginação por deslocamento. A busca por departamento foi implementada com correspondência exata sem diferenciar caixa; departamentos homônimos são incluídos.
+3. **Listagem e busca:** inicialmente o responsável técnico escolheu `Page` do Spring Data. Após revisão arquitetural, solicitou eliminar esse acoplamento do núcleo. A aplicação agora usa EmployeePagination e PageResult, com conversão na infraestrutura. O custo potencial de contagem e os limites por deslocamento permanecem. A busca por departamento mantém correspondência exata sem diferenciar caixa e inclui homônimos.
 4. **Mensageria:** Kafka e Outbox foram escolhidos pelo responsável técnico após comparação de alternativas. Empregado e evento são gravados na mesma transação; o publicador aguarda confirmação do broker e o consumidor deduplica por eventId. Após revisão, o responsável técnico escolheu JPA também para Outbox/histórico para uniformizar a persistência. O bloqueio do publicador é pessimista; o controle otimista de Employee permanece separado.
 5. **Inativação e concorrência:** o responsável técnico escolheu `@Version` após comparar bloqueio otimista, pessimista e atualização condicional. A IA implementou a releitura limitada após conflito e, neste incremento, a gravação de EmployeeStatusChangedEvent na mesma transação da mudança. Repetição sem transição não gera outro evento lógico.
 6. **Tópicos e contratos:** ao comparar um tópico comum com dois tópicos, o responsável técnico escolheu “Dois tópicos, preservando o atual”. A IA acrescentou employee-status-changed.v1 e manteve employee-created.v1, reutilizando Outbox e histórico. A ausência de ordem entre tópicos foi documentada e testada processando a inativação antes da criação.
 7. **Admissão no domínio:** o responsável técnico solicitou uma classe de serviço de domínio para as regras de departamento, cargo e e-mail. A IA implementou uma política independente de frameworks, uma porta de consulta e o adaptador JPA. CreateEmployee mantém a coordenação; o banco continua sendo a garantia final sob concorrência.
+8. **Identidade das entidades:** o responsável técnico solicitou igualdade por ID para Department/Position. A IA manteve atributos, validações e acessores, usando classes finais em coerência com Employee; objetos de valor continuam com igualdade por valor. Testes verificam atributos diferentes com o mesmo ID e atributos iguais com IDs diferentes.
 
 ## Limitações e como foram tratadas
 

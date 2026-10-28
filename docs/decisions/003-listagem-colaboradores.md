@@ -1,10 +1,10 @@
 # 003 — Listagem paginada de colaboradores
 
-Estado: integrado na main pelo PR #1 após aprovação do responsável técnico. Data: 27/10/2026.
+Estado: integrado na main pelo PR #1. A decisão 009 substitui o acoplamento de paginação por tipos próprios, preservando o contrato HTTP. Criado em 27/10/2026, atualizado em 28/10/2026.
 
 ## Contexto e decisões
 
-- O responsável técnico escolheu `Page` do Spring Data. A aplicação usa Page e Pageable, aceitando dependência do Spring Data nessa camada; o domínio permanece independente de frameworks.
+- A escolha inicial de Page/Pageable na aplicação foi revista pelo responsável técnico. A aplicação agora usa EmployeePagination e PageResult; o adaptador JPA converte para Spring Data. Domínio e aplicação permanecem independentes de frameworks; detalhes na decisão 009.
 - O endpoint GET /employees retorna JSON próprio com content, page, size, totalElements e totalPages. Isso evita depender diretamente da serialização automática de Page.
 - Como proposto para esta etapa, filtros opcionais por nome e status são combinados; sem status, ativos e inativos são incluídos. Nome é parcial e não distingue caixa; espaços externos são removidos e uma entrada vazia não filtra. Não há garantia de equivalência entre letras com e sem acento.
 - Páginas começam em 0, com tamanho padrão 20 e máximo 100; valores inválidos ou deslocamento maior que Integer.MAX_VALUE retornam 400. Ordenação é ascendente por createdAt e id para desempate.
@@ -12,7 +12,7 @@ Estado: integrado na main pelo PR #1 após aprovação do responsável técnico.
 
 ## Alternativas e consequências
 
-Uma interface própria de paginação eliminaria a dependência de Spring Data na aplicação, ao custo de mais conversões. Paginação por cursor pode ser apropriada para grandes volumes ou navegação diante de alterações, mas exige outro contrato. Paginação por número de página pode mudar de resultado quando registros são incluídos ou removidos entre requisições; ordenação determinística não produz um snapshot entre requisições.
+Os tipos próprios de paginação eliminam Spring Data da aplicação, ao custo de conversão e manutenção dos metadados. Paginação por cursor pode ser apropriada para grandes volumes ou navegação diante de alterações, mas exige outro contrato. Paginação por número de página pode mudar de resultado quando registros são incluídos ou removidos entre requisições; ordenação determinística não produz um snapshot entre requisições.
 
 Page pode exigir consulta de contagem para totalElements e totalPages. Busca parcial com `LIKE '%texto%'` e `LOWER` pode ser cara em volume alto e não deve ser considerada indexada/eficiente sem medição; avaliar EXPLAIN e alternativas conforme volume e padrões de busca. Retornar e-mail na listagem respeita o modelo atual, mas autenticação/autorização e minimização de dados ainda precisam ser definidos.
 
