@@ -217,9 +217,11 @@ O workflow [CI](.github/workflows/ci.yml) executa em PRs destinados à main e em
 
 O Maven Wrapper executa clean verify com o perfil postgres e -Dkafka.tests=true, incluindo os dois testes de broker real. Depois dos testes, o workflow constrói a imagem Docker. Falhas nos testes ou na construção reprovam o job. A cobertura é medida pelo JaCoCo; não há bloqueio por percentual mínimo.
 
-Na aba Actions do repositório, abra a execução CI para consultar etapas e resultados. O artefato verificacao-java-postgres-kafka contém relatórios Surefire, cobertura HTML/XML/CSV e logs dos serviços, retidos por sete dias. Após baixar e extrair, abra site/jacoco/index.html na estrutura extraída correspondente a target; os caminhos podem aparecer sob target/. Relatórios de cobertura só existirão se o Maven alcançar a fase verify.
+Na aba Actions do repositório, abra a execução CI para consultar etapas e resultados. O artefato verificacao-java-postgres-kafka contém relatórios Surefire, cobertura HTML/XML/CSV e logs dos serviços, retidos por sete dias. Após baixar e extrair, abra target/site/jacoco/index.html. Relatórios de cobertura só existirão se o Maven alcançar a fase verify.
 
 Os serviços e volumes do runner são descartados ao final, inclusive em falhas normais. Uma nova atualização do mesmo PR cancela a execução anterior para evitar validar uma revisão ultrapassada. O workflow solicita apenas leitura do conteúdo e fixa as actions por SHA. Não exige secrets de infraestrutura nem publica imagem em registry. O status do workflow informa o resultado; impedir merges com falha exige configurar proteção da branch separadamente, o que não foi alterado neste incremento.
+
+A [primeira execução no GitHub Actions](https://github.com/hodestito/gestao-pessoas/actions/runs/40707903180), revisão 74d3d9c, passou com 87 testes, zero falhas, erros ou ignorados, e construção Docker concluída. Os relatórios baixados do runner registraram 99,07% de linhas (426/430) e 95,69% de ramos (111/116), iguais à medição local. Consulte o status do PR para o resultado da revisão mais recente.
 
 ## Próximos incrementos
 

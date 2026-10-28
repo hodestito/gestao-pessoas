@@ -79,6 +79,8 @@
 
 **Decisões e limites:** optou-se por um job com PostgreSQL/Kafka em vez de duplicar configuração de serviços ou criar matriz H2/PostgreSQL. A imagem só é construída após os testes; sua execução completa foi validada na etapa Docker. Não foram introduzidos gate percentual ou proteção de branch. A decisão 013 distingue implementação do workflow de comprovação de execução remota.
 
+**Validação:** a primeira execução no GitHub Actions (40707903180, revisão 74d3d9c) passou. A IA baixou os artefatos e conferiu 87 testes sem falhas, erros ou ignorados, cobertura de 99,07% de linhas/95,69% de ramos e construção Docker concluída. A evidência identifica a revisão executada; alterações posteriores são acompanhadas pelo status do PR.
+
 ## Decisões influenciadas por IA e revisão técnica
 
 1. **Domínio e arquitetura:** a IA propôs uma organização em camadas e a separação do domínio de frameworks. O modelo foi revisto com o responsável técnico; os limites e as decisões permanecem documentados em `docs/decisions/`.

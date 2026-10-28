@@ -1,6 +1,6 @@
 # 013 — Integração contínua
 
-Estado: implementado em ci/github-actions, aguardando validação remota, revisão e aprovação de merge. Data: 28/10/2026. O PR #10 foi integrado após aprovação do responsável técnico.
+Estado: implementado em ci/github-actions, validado remotamente e aguardando revisão/aprovação de merge pelo PR #11. Data: 28/10/2026. O PR #10 foi integrado após aprovação do responsável técnico.
 
 ## Escolha e escopo
 
@@ -26,7 +26,13 @@ Novas execuções da mesma referência cancelam as anteriores. O timeout do job 
 
 Os artefatos Surefire/JaCoCo e logs são retidos por sete dias. Se o processo falhar antes de verify, pode não haver relatório de cobertura; logs e relatórios já existentes continuam úteis. Upload de artefatos e cache não substituem a aprovação dos testes.
 
-GitHub Actions foi consultado no repositório: está habilitado e permite as actions utilizadas. O resultado remoto será conferido após publicar o workflow e abrir o PR; a existência do arquivo, isoladamente, não comprova execução bem-sucedida.
+GitHub Actions foi consultado no repositório: está habilitado e permite as actions utilizadas. A existência do arquivo, isoladamente, não comprova execução bem-sucedida.
+
+## Resultado remoto observado
+
+A [execução 40707903180](https://github.com/hodestito/gestao-pessoas/actions/runs/40707903180), disparada pelo PR #11 na revisão 74d3d9c2ab962a05d1d41c77ba258879ac1d79d6, concluiu testes, empacotamento, construção Docker, coleta/publicação de evidências e remoção do ambiente. Os artefatos foram baixados e inspecionados: 30 relatórios Surefire totalizaram 87 testes, zero falhas, erros ou ignorados. JaCoCo registrou 426/430 linhas (99,07%) e 111/116 ramos (95,69%), iguais à medição local anterior.
+
+O arquivo HTML veio em target/site/jacoco/index.html e os logs em compose.log. Os artefatos remotos expiram conforme a retenção de sete dias. Este registro identifica a revisão verificada; o status do PR deve ser consultado para execuções posteriores.
 
 ## Referências
 
