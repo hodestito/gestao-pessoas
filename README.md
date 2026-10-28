@@ -1,6 +1,6 @@
 # Gestão de pessoas — desafio técnico
 
-Projeto em construção para o desafio técnico. Estão implementados os seis endpoints e os eventos de criação e inativação, com Outbox JPA, publicação Kafka e consumidores de histórico. O incremento de inativação está nesta branch para revisão.
+Projeto em construção para o desafio técnico. Os seis endpoints e os eventos de criação e inativação, com Outbox JPA, Kafka e histórico, estão integrados à main. Esta branch extrai as regras de admissão de empregados para um serviço de domínio, para revisão.
 
 Employee contempla criação ativa, e-mail normalizado e inativação no domínio. Cadastro e inativação persistem empregado e seu evento na mesma transação. A inativação preserva o registro, usa controle otimista de versão e só registra evento se houver mudança efetiva.
 
@@ -15,6 +15,7 @@ Employee contempla criação ativa, e-mail normalizado e inativação no domíni
 - [Decisão 005](docs/decisions/005-inativacao-version.md): inativação, concorrência e transações.
 - [Decisão 006](docs/decisions/006-outbox-cadastro.md): Outbox, publicação Kafka, idempotência, limites e arquivos envolvidos.
 - [Decisão 007](docs/decisions/007-evento-inativacao.md): evento de inativação, dois tópicos e histórico compartilhado.
+- [Decisão 008](docs/decisions/008-servico-dominio-cadastro.md): política de admissão, consultas do domínio e divisão de responsabilidades.
 - [Uso de IA](AI_USAGE.md): participação da IA e padrão dos commits identificados com `[IA]`.
 
 Os documentos distinguem requisitos do enunciado, definições do candidato, propostas e comportamento implementado. O Git registra a evolução real; os documentos apresentam o entendimento atual. A arquitetura detalhada e outros registros de decisão serão acrescentados conforme discutirmos essas decisões.
@@ -27,7 +28,9 @@ Os documentos distinguem requisitos do enunciado, definições do candidato, pro
 
 ## Primeiro incremento
 
-O domínio concentra validações e não depende do Spring ou do JPA. Os casos de uso chamam interfaces de repositório; adaptadores JPA fazem a persistência. A API valida as entradas e retorna `201 Created` com o identificador gerado.
+O domínio concentra validações e não depende do Spring ou do JPA. EmployeeRegistrationPolicy decide se departamento/cargo existem e se o e-mail está disponível, consultando a porta EmployeeRegistrationRequirements. O adaptador JPA fornece essas informações. CreateEmployee coordena validação, criação/persistência e Outbox dentro da transação. A API valida as entradas e retorna `201 Created` com o identificador gerado.
+
+A política é uma classe Java sem @Service; o Spring a instancia na configuração. Employee protege seus valores e transições; a política reúne condições que envolvem outros registros; o caso de uso coordena a operação; constraints de unicidade e chaves estrangeiras garantem integridade sob concorrência.
 
 Exemplos com a aplicação em execução na porta 8080:
 
@@ -122,7 +125,7 @@ O teste Kafka cria e remove seus próprios tópicos e grupo. Verifica criação,
 
 ## Próximos incrementos
 
-1. Revisar e integrar o evento de inativação após aprovação do responsável técnico.
+1. Revisar e integrar a extração da política de admissão após aprovação do responsável técnico.
 2. Revisar regras de domínio e casos de uso com o responsável técnico.
 3. Revisar operação da mensageria, retenção e tratamento de mensagens inválidas conforme o escopo.
 4. Acrescentar testes de integração, Docker, documentação da API e registro do uso de IA.

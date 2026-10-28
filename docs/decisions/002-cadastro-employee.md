@@ -1,11 +1,11 @@
 # 002 — Cadastro de colaborador
 
-Estado: cadastro aprovado e implementado; complemento de Outbox/Kafka para revisão descrito na decisão 006. Data: 27/10/2026.
+Estado: cadastro e Outbox/Kafka integrados à main. A extração da política de admissão para domínio está implementada para revisão na decisão 008. Criado em 27/10/2026, atualizado em 28/10/2026.
 
 ## Decisões
 
 - Cadastro aceita name, email, departmentId e positionId, cria identificador UUID e usa `Clock` para obter createdAt. Nos testes de aplicação, UUID e relógio são fornecidos com valores fixos.
-- O caso de uso é Java puro e verifica existência das referências e e-mail. Um serviço na infraestrutura aplica `@Transactional` à operação inteira; a API depende da porta de entrada. Alternativa: transações individuais em cada repositório, que não definem a operação como uma unidade.
+- O caso de uso é Java puro e delega referências/e-mail ao serviço de domínio EmployeeRegistrationPolicy, descrito na decisão 008. Um serviço na infraestrutura aplica `@Transactional` à operação inteira; a API depende da porta de entrada. Alternativa: transações individuais em cada repositório, que não definem a operação como uma unidade.
 - A consulta prévia de e-mail permite resposta clara. O banco aplica unicidade sobre e-mail normalizado, exige caixa baixa e ausência de espaços externos e protege referências com chaves estrangeiras. A consulta sozinha não evita corrida.
 - E-mail duplicado retorna 409; departamento/cargo inexistentes retornam 422; valores inválidos retornam 400. Os códigos foram aprovados pelo responsável técnico.
 - Persistência e domínio são objetos separados. Employee.restore reconstitui estado persistido sem fingir que houve uma nova contratação.

@@ -8,10 +8,10 @@ Atualizado em 28/10/2026. Complementa o [modelo de domínio](domain.md). Contrat
 |---|---|---|---|
 | UC-01 | Criar departamento | POST /departments | Implementado, sujeito à revisão do modelo. |
 | UC-02 | Criar cargo | POST /positions | Implementado, sujeito à revisão do modelo. |
-| UC-03 | Cadastrar colaborador | POST /employees | Outbox, Kafka e histórico integrados à main no PR #4. |
+| UC-03 | Cadastrar colaborador | POST /employees | Outbox, Kafka e histórico integrados no PR #4; extração das regras para serviço de domínio nesta branch para revisão. |
 | UC-04 | Listar colaboradores | GET /employees | Implementado; integração aprovada pelo responsável técnico. |
 | UC-05 | Buscar por departamento | GET /employees/search?department=RH | Implementado, com integração autorizada pelo responsável técnico. |
-| UC-06 | Inativar colaborador | DELETE /employees/{id} | API integrada pelo PR #3; evento implementado nesta branch, aguardando revisão. |
+| UC-06 | Inativar colaborador | DELETE /employees/{id} | API e evento integrados à main pelos PRs #3 e #5. |
 
 O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo de autenticação/autorização implementado. O enunciado não define papéis de acesso.
 
@@ -52,8 +52,8 @@ O solicitante é um consumidor da API de Gestão de Pessoas. Não há mecanismo 
 **Fluxo implementado:**
 
 1. Validar a estrutura da requisição e os valores do domínio.
-2. Consultar as referências de departamento e cargo.
-3. Verificar disponibilidade do e-mail para antecipar uma resposta compreensível.
+2. Delegar a EmployeeRegistrationPolicy, que consulta existência de departamento e cargo pela porta do domínio.
+3. A política verifica disponibilidade do e-mail para antecipar uma resposta compreensível; mantém a ordem departamento → cargo → e-mail.
 4. Criar Employee e salvar em uma transação protegida por unicidade e chaves estrangeiras no banco.
 5. Gravar EmployeeCreatedEvent na Outbox na mesma transação; retornar 201 com os dados. Um publicador periódico envia ao Kafka e um consumidor grava o histórico de forma idempotente por eventId.
 
