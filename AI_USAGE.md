@@ -107,6 +107,14 @@
 
 **Validação e ajuste:** o runner inicialmente apontou conflito de variáveis no sandbox; os scripts passaram a usar escopo próprio. A versão final foi validada contra o schema oficial e executada com Newman 6.2.3 em duas rodadas: 32 requests, 84 asserções, zero falhas. As ferramentas de validação ficaram em diretórios temporários, sem dependência Node no projeto. A collection verifica HTTP; não afirma entrega Kafka apenas com 201/204 nem foi validada visualmente no Postman Desktop.
 
+### Exposição das métricas do Actuator
+
+**Instrução:** “Abra um PR com essa alteração, deixe aberto, sem mergear”.
+
+**Resultado:** a IA preparou uma branch com a configuração local existente `management.endpoints.web.exposure.include=health,metrics`. A alteração permite consultar as métricas já disponíveis pelo Actuator; as métricas personalizadas de Outbox permanecem adiadas por decisão do responsável técnico. Nenhuma classe ou dependência foi adicionada. O PR deve permanecer aberto para revisão, sem merge automático.
+
+**Validação:** `clean verify` com JDK 21 concluiu com sucesso: 87 testes contabilizados, zero falhas/erros e dois testes Kafka ignorados no perfil padrão. Uma instância temporária com H2 em memória e porta local dinâmica respondeu HTTP 200 em `/actuator/health`, `/actuator/metrics` e `/actuator/metrics/jvm.memory.used`; os conteúdos foram conferidos e a instância encerrada. A primeira tentativa de teste foi interrompida após a restrição do ambiente impedir a abertura de portas; a repetição com permissão apropriada passou. O perfil Testcontainers não foi executado neste incremento.
+
 ## Decisões influenciadas por IA e revisão técnica
 
 1. **Domínio e arquitetura:** a IA propôs uma organização em camadas e a separação do domínio de frameworks. O modelo foi revisto com o responsável técnico; os limites e as decisões permanecem documentados em `docs/decisions/`.
